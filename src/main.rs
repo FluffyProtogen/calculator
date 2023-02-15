@@ -4,7 +4,8 @@ use egui::vec2;
 
 fn main() {
     let mut options = NativeOptions::default();
-    options.initial_window_size = Some(vec2(300.0, 425.0));
+    options.initial_window_size = Some(vec2(760.0, 353.0));
+    options.resizable = false;
     options.transparent = true;
     run_native(
         "Calculator",
