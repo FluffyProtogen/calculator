@@ -1,10 +1,15 @@
+use eframe::*;
+use egui::{text::LayoutJob, *};
+use egui_extras::RetainedImage;
+
+use crate::calculator::Equation;
+use crate::calculator::Item::*;
 pub struct Calculator {
+    history_icon: RetainedImage,
     degrees: bool,
     inverse: bool,
+    equation: Equation,
 }
-
-use eframe::{glow::TIME_ELAPSED, *};
-use egui::{style::Spacing, text::LayoutJob, *};
 
 const FUNCTION_COLOR: Color32 = Color32::from_rgb(218, 220, 224);
 const NUMBER_COLOR: Color32 = Color32::from_rgb(233, 235, 236);
@@ -12,6 +17,7 @@ const BUTTON_WIDTH: f32 = 100.0;
 const BUTTON_HEIGHT: f32 = 45.0;
 const FONT_SIZE: f32 = 23.0;
 const GRID_SPACING: f32 = 7.5;
+const EQUATION_SIZE: f32 = 33.0;
 const ROUNDING: Rounding = {
     let rounding = 6.5;
     Rounding {
@@ -33,18 +39,35 @@ impl App for Calculator {
                     .inner_margin(Margin {
                         left: 15.0,
                         right: 15.0,
-                        top: 15.0,
-                        bottom: 15.0,
+                        top: 40.0,
+                        bottom: 10.0,
                     })
                     .show(ui, |ui| {
                         ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
-                            ui.label(RichText::new("(9 + 10) / 69 + 420").size(40.0));
+                            ui.label(
+                                self.equation
+                                    .render(EQUATION_SIZE, ui.visuals().text_color()),
+                            );
                         });
                     });
             });
         CentralPanel::default().show(ctx, |ui| {
             self.buttons(ui);
         });
+        Area::new("history")
+            .fixed_pos(pos2(17.0, 12.0))
+            .show(ctx, |ui| {
+                if ImageButton::new(
+                    self.history_icon.texture_id(ctx),
+                    self.history_icon.size_vec2(),
+                )
+                .frame(false)
+                .ui(ui)
+                .clicked()
+                {
+                    println!("F");
+                }
+            });
     }
 }
 
@@ -81,6 +104,12 @@ impl Calculator {
         Self {
             degrees: true,
             inverse: false,
+            history_icon: RetainedImage::from_svg_bytes(
+                "history icon",
+                include_bytes!("..\\assets\\History Icon.svg"),
+            )
+            .unwrap(),
+            equation: Equation::new(),
         }
     }
 
@@ -89,10 +118,18 @@ impl Calculator {
             ui.spacing_mut().item_spacing = vec2(GRID_SPACING, GRID_SPACING);
             ui.horizontal(|ui| {
                 self.rad_deg_buttons(ui);
-                calculator_button("x!", FUNCTION_COLOR).ui(ui);
-                calculator_button("(", FUNCTION_COLOR).ui(ui);
-                calculator_button(")", FUNCTION_COLOR).ui(ui);
-                calculator_button("%", FUNCTION_COLOR).ui(ui);
+                if calculator_button("x!", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Factorial);
+                }
+                if calculator_button("(", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(OpeningParenthesis);
+                }
+                if calculator_button(")", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(ClosingParenthesis);
+                }
+                if calculator_button("%", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Modulus);
+                }
                 calculator_button("AC", FUNCTION_COLOR).ui(ui);
             });
 
@@ -112,13 +149,19 @@ impl Calculator {
                 }
 
                 if self.inverse {
-                    Button::new(superscript(ui, "sin", "-1"))
+                    if Button::new(superscript(ui, "sin", "-1"))
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
-                        .ui(ui);
+                        .ui(ui)
+                        .clicked()
+                    {
+                        self.equation.try_push(Asin);
+                    };
                 } else {
-                    calculator_button("sin", FUNCTION_COLOR).ui(ui);
+                    if calculator_button("sin", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Sin);
+                    }
                 }
 
                 if self.inverse {
@@ -297,12 +340,7 @@ impl Calculator {
         );
 
         if response.clicked() {
-            let x = response.interact_pointer_pos().unwrap().x;
-            if x > response.rect.center().x {
-                self.degrees = true;
-            } else {
-                self.degrees = false;
-            }
+            self.degrees = !self.degrees;
         }
     }
 }
