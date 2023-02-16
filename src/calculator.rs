@@ -1,7 +1,7 @@
 use egui::{text::LayoutJob, *};
 use Item::*;
 
-const POWER_SCALE: f32 = 0.75;
+const POWER_SCALE: f32 = 0.65;
 const POWER_MAX: usize = 4;
 
 #[derive(Debug, PartialEq)]
@@ -209,26 +209,35 @@ impl Equation {
                 .count()
     }
 
-    fn power_end(&self, power_start_index: usize, current_index: usize) -> bool {
+    fn power_end_count(&self, power_start_index: usize, current_index: usize) -> usize {
         assert_eq!(self.list.iter().nth(power_start_index), Some(&Power));
-        let mut parenthesis_count = self.open_parentheses_count_at(power_start_index);
-        for item in self
+        let mut parenthesis_count = 0;
+        let mut power_count = 0;
+        for (index, item) in self
             .list
             .iter()
             .skip(power_start_index)
             .take(current_index - power_start_index)
+            .enumerate()
         {
+            if *item == Power {
+                power_count += 1;
+            }
             if *item == ClosingParenthesis {
                 parenthesis_count -= 1;
-                if parenthesis_count == 0 {
-                    return true;
-                }
             }
             if parenthesis_count == 0 && item.can_put_operation_after() {
-                return true;
+                if let Some(Power) = self.list.get(power_start_index + index + 1) {
+                    return 0;
+                } else {
+                    return power_count;
+                }
+            }
+            if item.is_opening_parenthesis() {
+                parenthesis_count += 1;
             }
         }
-        false
+        return 0;
     }
 
     pub fn render(&self, size: f32, color: Color32) -> LayoutJob {
@@ -263,9 +272,15 @@ impl Equation {
             );
         };
 
-        let mut power_level = 0;
-
+        let mut power_indices = vec![];
         for (index, item) in self.list.iter().enumerate() {
+            let power_level = power_indices.len();
+            if let Some(start_index) = power_indices.last() {
+                for _ in 0..self.power_end_count(*start_index, index + 1) {
+                    power_indices.pop();
+                    println!("Power popped");
+                }
+            }
             match item {
                 Number(num) => default_layout(&num, power_level),
                 Factorial => default_layout("!", power_level),
@@ -286,14 +301,16 @@ impl Equation {
                 EXP => default_layout("E", power_level),
                 Add => default_layout(" + ", power_level),
                 Power => {
-                    power_level += 1;
+                    power_indices.push(index);
                     if index == self.list.len() - 1 {
-                        default_layout("□", power_level);
+                        default_layout("□", power_level + 1);
                     }
                 }
                 _ => {}
             }
         }
+
+        println!("{}", power_indices.len());
 
         for _ in 0..self.open_parentheses_count_at(0) {
             job.append(
@@ -301,7 +318,7 @@ impl Equation {
                 0.0,
                 TextFormat {
                     font_id: FontId::new(
-                        size * POWER_SCALE.powf(power_level as f32),
+                        size * POWER_SCALE.powf(power_indices.len() as f32),
                         FontFamily::Name("roboto".into()),
                     ),
                     color: Color32::from_rgb(204, 204, 204),
