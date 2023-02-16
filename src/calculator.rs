@@ -209,37 +209,6 @@ impl Equation {
                 .count()
     }
 
-    fn power_end_count(&self, power_start_index: usize, current_index: usize) -> usize {
-        assert_eq!(self.list.iter().nth(power_start_index), Some(&Power));
-        let mut parenthesis_count = 0;
-        let mut power_count = 0;
-        for (index, item) in self
-            .list
-            .iter()
-            .skip(power_start_index)
-            .take(current_index - power_start_index)
-            .enumerate()
-        {
-            if *item == Power {
-                power_count += 1;
-            }
-            if *item == ClosingParenthesis {
-                parenthesis_count -= 1;
-            }
-            if parenthesis_count == 0 && item.can_put_operation_after() {
-                if let Some(Power) = self.list.get(power_start_index + index + 1) {
-                    return 0;
-                } else {
-                    return power_count;
-                }
-            }
-            if item.is_opening_parenthesis() {
-                parenthesis_count += 1;
-            }
-        }
-        return 0;
-    }
-
     pub fn render(&self, size: f32, color: Color32) -> LayoutJob {
         let mut job = LayoutJob::default();
 
@@ -272,14 +241,18 @@ impl Equation {
             );
         };
 
-        let mut power_indices = vec![];
+        let mut level_open_parentheses_counts = vec![];
+        let mut parentheses_counts = vec![];
         for (index, item) in self.list.iter().enumerate() {
-            let power_level = power_indices.len();
-            if let Some(start_index) = power_indices.last() {
-                for _ in 0..self.power_end_count(*start_index, index + 1) {
-                    power_indices.pop();
-                    println!("Power popped");
-                }
+            let power_level = parentheses_counts.len();
+            if power_level + 1 > level_open_parentheses_counts.len() {
+                level_open_parentheses_counts.push(0);
+            }
+            if item.is_opening_parenthesis() {
+                level_open_parentheses_counts[power_level] += 1;
+            }
+            if *item == ClosingParenthesis {
+                level_open_parentheses_counts[power_level] -= 1;
             }
             match item {
                 Number(num) => default_layout(&num, power_level),
@@ -301,33 +274,53 @@ impl Equation {
                 EXP => default_layout("E", power_level),
                 Add => default_layout(" + ", power_level),
                 Power => {
-                    power_indices.push(index);
+                    parentheses_counts.push(0);
                     if index == self.list.len() - 1 {
                         default_layout("□", power_level + 1);
+                        if power_level + 2 > level_open_parentheses_counts.len() {
+                            level_open_parentheses_counts.push(0);
+                        }
                     }
                 }
                 _ => {}
             }
+            if let Some(parentheses_count) = parentheses_counts.last_mut() {
+                if item.is_opening_parenthesis() {
+                    *parentheses_count += 1;
+                }
+                if *item == ClosingParenthesis {
+                    *parentheses_count -= 1;
+                }
+                if *parentheses_count == 0
+                    && item.can_put_operation_after()
+                    && self.list.get(index + 1) != Some(&Power)
+                {
+                    while parentheses_counts.last() == Some(&0) {
+                        parentheses_counts.pop();
+                    }
+                }
+            }
         }
 
-        println!("{}", power_indices.len());
-
-        for _ in 0..self.open_parentheses_count_at(0) {
-            job.append(
-                ")",
-                0.0,
-                TextFormat {
-                    font_id: FontId::new(
-                        size * POWER_SCALE.powf(power_indices.len() as f32),
-                        FontFamily::Name("roboto".into()),
-                    ),
-                    color: Color32::from_rgb(204, 204, 204),
-                    valign: Align::TOP,
-                    ..Default::default()
-                },
-            );
+        for (level, open_parens) in level_open_parentheses_counts.iter().rev().enumerate() {
+            let level =
+                (level_open_parentheses_counts.len() as i32 - level as i32 - 1).clamp(0, i32::MAX);
+            for i in 0..*open_parens {
+                job.append(
+                    ")",
+                    0.0,
+                    TextFormat {
+                        font_id: FontId::new(
+                            size * POWER_SCALE.powf(level as f32),
+                            FontFamily::Name("roboto".into()),
+                        ),
+                        color: Color32::from_rgb(204, 204, 204),
+                        valign: Align::TOP,
+                        ..Default::default()
+                    },
+                );
+            }
         }
-
         job
     }
 }
