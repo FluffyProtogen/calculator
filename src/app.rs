@@ -84,9 +84,16 @@ impl Calculator {
                 "roboto".into(),
                 FontData::from_static(include_bytes!("..\\assets\\Roboto-Regular.ttf")),
             );
+            fonts.font_data.insert(
+                "arial".into(),
+                FontData::from_static(include_bytes!("..\\assets\\arial.ttf")),
+            );
             fonts
                 .families
                 .insert(FontFamily::Name("roboto".into()), vec!["roboto".into()]);
+            fonts
+                .families
+                .insert(FontFamily::Name("arial".into()), vec!["arial".into()]);
             fonts
         };
         ctx.set_fonts(fonts);

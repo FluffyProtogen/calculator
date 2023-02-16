@@ -225,14 +225,14 @@ impl Equation {
             return job;
         }
 
-        let mut default_layout = |text, power_level| {
+        let mut default_layout = |text, power_level, font: &str| {
             job.append(
                 text,
                 0.0,
                 TextFormat {
                     font_id: FontId::new(
                         size * POWER_SCALE.powf(power_level as f32),
-                        FontFamily::Name("roboto".into()),
+                        FontFamily::Name(font.into()),
                     ),
                     color,
                     valign: Align::TOP,
@@ -255,28 +255,28 @@ impl Equation {
                 level_open_parentheses_counts[power_level] -= 1;
             }
             match item {
-                Number(num) => default_layout(&num, power_level),
-                Factorial => default_layout("!", power_level),
-                OpeningParenthesis => default_layout("(", power_level),
-                ClosingParenthesis => default_layout(")", power_level),
-                Modulus => default_layout(" % ", power_level),
-                Sin => default_layout("sin(", power_level),
-                Ln => default_layout("ln(", power_level),
-                Divide => default_layout(" ÷ ", power_level),
-                Pi => default_layout("π", power_level),
-                Cos => default_layout("cos(", power_level),
-                Log => default_layout("log(", power_level),
-                Multiply => default_layout(" × ", power_level),
-                E => default_layout(" e ", power_level),
-                Tan => default_layout("tan(", power_level),
-                Sqrt => default_layout("√(", power_level),
-                Minus => default_layout(" – ", power_level),
-                EXP => default_layout("E", power_level),
-                Add => default_layout(" + ", power_level),
+                Number(num) => default_layout(&num, power_level, "roboto"),
+                Factorial => default_layout("!", power_level, "roboto"),
+                OpeningParenthesis => default_layout("(", power_level, "roboto"),
+                ClosingParenthesis => default_layout(")", power_level, "roboto"),
+                Modulus => default_layout(" % ", power_level, "roboto"),
+                Sin => default_layout("sin(", power_level, "roboto"),
+                Ln => default_layout("ln(", power_level, "roboto"),
+                Divide => default_layout(" ÷ ", power_level, "roboto"),
+                Pi => default_layout("π", power_level, "roboto"),
+                Cos => default_layout("cos(", power_level, "roboto"),
+                Log => default_layout("log(", power_level, "roboto"),
+                Multiply => default_layout(" × ", power_level, "roboto"),
+                E => default_layout(" e ", power_level, "roboto"),
+                Tan => default_layout("tan(", power_level, "roboto"),
+                Sqrt => default_layout("√(", power_level, "roboto"),
+                Minus => default_layout(" – ", power_level, "roboto"),
+                EXP => default_layout("E", power_level, "roboto"),
+                Add => default_layout(" + ", power_level, "roboto"),
                 Power => {
                     parentheses_counts.push(0);
                     if index == self.list.len() - 1 {
-                        default_layout("□", power_level + 1);
+                        default_layout("□", power_level + 1, "arial");
                         if power_level + 2 > level_open_parentheses_counts.len() {
                             level_open_parentheses_counts.push(0);
                         }
