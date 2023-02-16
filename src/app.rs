@@ -30,6 +30,7 @@ const ROUNDING: Rounding = {
 
 impl App for Calculator {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+        self.handle_key_presses(ctx);
         TopBottomPanel::top("top panel")
             .show_separator_line(false)
             .show(ctx, |ui| {
@@ -46,7 +47,8 @@ impl App for Calculator {
                         ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
                             ui.label(
                                 self.equation
-                                    .render(EQUATION_SIZE, ui.visuals().text_color()),
+                                    .render(EQUATION_SIZE, ui.visuals().text_color())
+                                    .clone(),
                             );
                         });
                     });
@@ -113,6 +115,43 @@ impl Calculator {
         }
     }
 
+    fn handle_key_presses(&mut self, ctx: &Context) {
+        use Key::*;
+        if ctx.input(|i| i.key_pressed(Num1)) {
+            self.equation.try_push(Number("1".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num2)) {
+            self.equation.try_push(Number("2".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num3)) {
+            self.equation.try_push(Number("3".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num4)) {
+            self.equation.try_push(Number("4".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num5)) {
+            self.equation.try_push(Number("5".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num6)) {
+            self.equation.try_push(Number("6".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num7)) {
+            self.equation.try_push(Number("7".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num8)) {
+            self.equation.try_push(Number("8".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num9)) {
+            self.equation.try_push(Number("9".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Num0)) {
+            self.equation.try_push(Number("0".into()));
+        }
+        if ctx.input(|i| i.key_pressed(Backspace)) {
+            self.equation.backspace();
+        }
+    }
+
     fn buttons(&mut self, ui: &mut Ui) {
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing = vec2(GRID_SPACING, GRID_SPACING);
@@ -130,7 +169,9 @@ impl Calculator {
                 if calculator_button("%", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Modulus);
                 }
-                calculator_button("AC", FUNCTION_COLOR).ui(ui);
+                if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
+                    todo!()
+                }
             });
 
             ui.horizontal(|ui| {
@@ -165,81 +206,145 @@ impl Calculator {
                 }
 
                 if self.inverse {
-                    Button::new(superscript(ui, "e", "x"))
+                    if Button::new(superscript(ui, "e", "x"))
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
-                        .ui(ui);
+                        .ui(ui)
+                        .clicked()
+                    {
+                        todo!()
+                    }
                 } else {
-                    calculator_button("ln", FUNCTION_COLOR).ui(ui);
+                    if calculator_button("ln", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Ln);
+                    }
                 }
-                calculator_button("7", NUMBER_COLOR).ui(ui);
-                calculator_button("8", NUMBER_COLOR).ui(ui);
-                calculator_button("9", NUMBER_COLOR).ui(ui);
-                calculator_button("÷", FUNCTION_COLOR).ui(ui);
+                if calculator_button("7", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("7".into()));
+                }
+                if calculator_button("8", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("8".into()));
+                }
+                if calculator_button("9", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("9".into()));
+                }
+                if calculator_button("÷", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Divide);
+                }
             });
             ui.horizontal(|ui| {
-                calculator_button("π", FUNCTION_COLOR).ui(ui);
-
-                if self.inverse {
-                    Button::new(superscript(ui, "cos", "-1"))
-                        .fill(FUNCTION_COLOR)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
-                        .ui(ui);
-                } else {
-                    calculator_button("cos", FUNCTION_COLOR).ui(ui);
-                }
-                if self.inverse {
-                    Button::new(superscript(ui, "x", "10"))
-                        .fill(FUNCTION_COLOR)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
-                        .ui(ui);
-                } else {
-                    calculator_button("log", FUNCTION_COLOR).ui(ui);
-                }
-                calculator_button("4", NUMBER_COLOR).ui(ui);
-                calculator_button("5", NUMBER_COLOR).ui(ui);
-                calculator_button("6", NUMBER_COLOR).ui(ui);
-                calculator_button("×", FUNCTION_COLOR).ui(ui);
-            });
-            ui.horizontal(|ui| {
-                calculator_button("e", FUNCTION_COLOR).ui(ui);
-                if self.inverse {
-                    Button::new(superscript(ui, "tan", "-1"))
-                        .fill(FUNCTION_COLOR)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
-                        .ui(ui);
-                } else {
-                    calculator_button("tan", FUNCTION_COLOR).ui(ui);
+                if calculator_button("π", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Pi);
                 }
 
                 if self.inverse {
-                    Button::new(superscript(ui, "x", "2"))
+                    if Button::new(superscript(ui, "cos", "-1"))
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
-                        .ui(ui);
+                        .ui(ui)
+                        .clicked()
+                    {
+                        self.equation.try_push(Acos);
+                    }
                 } else {
-                    calculator_button("√", FUNCTION_COLOR).ui(ui);
+                    if calculator_button("cos", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Cos);
+                    }
                 }
-                calculator_button("1", NUMBER_COLOR).ui(ui);
-                calculator_button("2", NUMBER_COLOR).ui(ui);
-                calculator_button("3", NUMBER_COLOR).ui(ui);
-                calculator_button("–", FUNCTION_COLOR).ui(ui);
+                if self.inverse {
+                    if Button::new(superscript(ui, "x", "10"))
+                        .fill(FUNCTION_COLOR)
+                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
+                        .rounding(ROUNDING)
+                        .ui(ui)
+                        .clicked()
+                    {
+                        todo!()
+                    }
+                } else {
+                    if calculator_button("log", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Log);
+                    }
+                }
+                if calculator_button("4", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("4".into()));
+                }
+                if calculator_button("5", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("5".into()));
+                }
+                if calculator_button("6", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("6".into()));
+                }
+                if calculator_button("×", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Multiply);
+                }
+            });
+            ui.horizontal(|ui| {
+                if calculator_button("e", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(E);
+                }
+                if self.inverse {
+                    if Button::new(superscript(ui, "tan", "-1"))
+                        .fill(FUNCTION_COLOR)
+                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
+                        .rounding(ROUNDING)
+                        .ui(ui)
+                        .clicked()
+                    {
+                        self.equation.try_push(Atan);
+                    }
+                } else {
+                    if calculator_button("tan", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Tan);
+                    }
+                }
+
+                if self.inverse {
+                    if Button::new(superscript(ui, "x", "2"))
+                        .fill(FUNCTION_COLOR)
+                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
+                        .rounding(ROUNDING)
+                        .ui(ui)
+                        .clicked()
+                    {
+                        todo!();
+                    }
+                } else {
+                    if calculator_button("√", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Sqrt);
+                    }
+                }
+                if calculator_button("1", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("1".into()));
+                }
+                if calculator_button("2", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("2".into()));
+                }
+                if calculator_button("3", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("3".into()));
+                }
+                if calculator_button("–", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Minus);
+                }
             });
             ui.horizontal(|ui| {
                 if self.inverse {
-                    calculator_button("Rnd", FUNCTION_COLOR).ui(ui);
+                    if calculator_button("Rnd", FUNCTION_COLOR).ui(ui).clicked() {
+                        todo!()
+                    }
                 } else {
-                    calculator_button("Ans", FUNCTION_COLOR).ui(ui);
+                    if calculator_button("Ans", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.try_push(Ans);
+                    }
                 }
-                calculator_button("EXP", FUNCTION_COLOR).ui(ui);
+                if calculator_button("EXP", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(EXP);
+                }
 
                 if self.inverse {
-                    Button::new({
+                    if Button::new({
                         let mut job = LayoutJob::default();
                         job.append(
                             "y",
@@ -267,25 +372,43 @@ impl Calculator {
                     .fill(FUNCTION_COLOR)
                     .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                     .rounding(ROUNDING)
-                    .ui(ui);
+                    .ui(ui)
+                    .clicked()
+                    {
+                        todo!();
+                    }
                 } else {
-                    Button::new(superscript(ui, "x", "y"))
+                    if Button::new(superscript(ui, "x", "y"))
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
-                        .ui(ui);
+                        .ui(ui)
+                        .clicked()
+                    {
+                        self.equation.try_push(Power);
+                    }
                 }
 
-                calculator_button("0", NUMBER_COLOR).ui(ui);
-                calculator_button(".", NUMBER_COLOR).ui(ui);
+                if calculator_button("0", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number("0".into()));
+                }
+                if calculator_button(".", NUMBER_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Number(".".into()));
+                }
 
-                Button::new(RichText::new("=").size(FONT_SIZE).color(Color32::WHITE))
+                if Button::new(RichText::new("=").size(FONT_SIZE).color(Color32::WHITE))
                     .fill(Color32::from_rgb(66, 133, 244))
                     .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                     .rounding(ROUNDING)
-                    .ui(ui);
+                    .ui(ui)
+                    .clicked()
+                {
+                    todo!();
+                }
 
-                calculator_button("+", FUNCTION_COLOR).ui(ui);
+                if calculator_button("+", FUNCTION_COLOR).ui(ui).clicked() {
+                    self.equation.try_push(Add);
+                }
             });
         });
     }
