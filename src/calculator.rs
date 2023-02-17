@@ -7,10 +7,11 @@ const POWER_MAX: usize = 4;
 #[derive(Debug, PartialEq)]
 pub enum Item {
     Number(String),
+    Rnd(String),
     Factorial,
     OpeningParenthesis,
     ClosingParenthesis,
-    Modulus,
+    Percent,
     Sin,
     Ln,
     Divide,
@@ -53,7 +54,7 @@ impl Item {
                     true
                 }
             }
-            Factorial | Pi | E | Ans | ClosingParenthesis => true,
+            Percent | Factorial | Pi | E | Ans | ClosingParenthesis | Rnd(..) => true,
             _ => false,
         }
     }
@@ -71,7 +72,7 @@ impl Item {
                     true
                 }
             }
-            Factorial | Pi | E | Ans | ClosingParenthesis => true,
+            Percent | Factorial | Pi | E | Ans | ClosingParenthesis | Rnd(..) => true,
             _ => false,
         }
     }
@@ -98,31 +99,64 @@ impl Equation {
             } else {
                 self.list.pop();
             }
+        } else if matches!(
+            self.list.last(),
+            Some(Power) | Some(Factorial) | Some(Percent)
+        ) {
+            if let Some(Number(num)) = self.list.iter_mut().nth_back(1) {
+                if num == "0." {
+                    self.list.pop();
+                    self.list.pop();
+                } else if num == "0" {
+                    self.list.pop();
+                    self.list.pop();
+                } else {
+                    self.list.pop();
+                }
+            } else {
+                self.list.pop();
+            }
         } else {
             self.list.pop();
         }
     }
 
-    pub fn try_push(&mut self, item: Item) {
+    pub fn try_push(&mut self, item: Item) -> bool {
         match item {
             _ if item.is_opening_parenthesis() => {
+                if matches!(
+                    self.list.last(),
+                    Some(ClosingParenthesis) | Some(Pi) | Some(E) | Some(Ans)
+                ) {
+                    self.list.push(Multiply);
+                }
                 self.list.push(item);
+                true
             }
             ClosingParenthesis => {
                 if let Some(last) = self.list.last() {
                     if last.can_put_end_parenthesis_after() && self.open_parentheses_count_at(0) > 0
                     {
                         self.list.push(ClosingParenthesis);
+                        true
+                    } else {
+                        false
                     }
+                } else {
+                    false
                 }
             }
             Number(num) => {
                 if let Some(Number(current_num)) = self.list.last_mut() {
                     if num == "." {
                         if current_num == "-" {
-                            current_num.push_str("0.")
+                            current_num.push_str("0.");
+                            true
                         } else if !current_num.contains('.') {
                             current_num.push('.');
+                            true
+                        } else {
+                            false
                         }
                     } else {
                         if let Some('0') = current_num.chars().nth(0) {
@@ -134,9 +168,19 @@ impl Equation {
                         } else {
                             current_num.push_str(&num);
                         }
+                        true
                     }
                 } else {
-                    if let Some(ClosingParenthesis) = self.list.last() {
+                    if matches!(
+                        self.list.last(),
+                        Some(ClosingParenthesis)
+                            | Some(Pi)
+                            | Some(E)
+                            | Some(Ans)
+                            | Some(Rnd(..))
+                            | Some(Percent)
+                            | Some(Factorial)
+                    ) {
                         self.list.push(Multiply);
                     }
                     if num == "." {
@@ -144,18 +188,47 @@ impl Equation {
                     } else {
                         self.list.push(Number(num));
                     }
+                    true
                 }
             }
-            Factorial | Add | Multiply | Divide => {
+            Add | Multiply | Divide => {
                 if let Some(last) = self.list.last_mut() {
                     if last.can_put_operation_after() {
                         self.list.push(item);
+                        true
                     } else if matches!(last, Add | Multiply | Divide | Minus) {
                         *last = item;
+                        true
+                    } else {
+                        false
                     }
                 } else {
                     self.list.push(Number("0".into()));
                     self.list.push(item);
+                    true
+                }
+            }
+            Factorial | Percent => {
+                if let Some(Number(num)) = self.list.last() {
+                    if num == "-" {
+                        false
+                    } else {
+                        self.list.push(item);
+                        true
+                    }
+                } else {
+                    if let Some(last_item) = self.list.last() {
+                        if last_item.can_put_operation_after() {
+                            self.list.push(item);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        self.list.push(Number("0".into()));
+                        self.list.push(item);
+                        true
+                    }
                 }
             }
             Minus => {
@@ -164,35 +237,81 @@ impl Equation {
                         Number(num) => {
                             if num.len() == 1 {
                                 if num.chars().nth(0).unwrap() == '-' {
+                                    false
                                 } else {
                                     self.list.push(Minus);
+                                    true
                                 }
                             } else {
                                 self.list.push(Minus);
+                                true
                             }
                         }
-                        Modulus | Divide | Multiply | Power | EXP => {
-                            self.list.push(Number("-".into()))
+                        Percent | Divide | Multiply | Power | EXP => {
+                            self.list.push(Number("-".into()));
+                            true
                         }
-                        Add => *last = Minus,
+                        Add => {
+                            *last = Minus;
+                            true
+                        }
                         _ if last.is_opening_parenthesis() => {
                             self.list.push(Number("-".into()));
+                            true
                         }
-                        _ if last.can_put_end_parenthesis_after() => self.list.push(Minus),
-                        _ => {}
+                        _ if last.can_put_end_parenthesis_after() => {
+                            self.list.push(Minus);
+                            true
+                        }
+                        _ => false,
                     }
                 } else {
-                    self.list.push(Number("-".into()))
+                    self.list.push(Number("-".into()));
+                    true
                 }
             }
             Power => {
                 if let Some(last) = self.list.last() {
                     if last.can_put_operation_after() {
                         self.list.push(Power);
+                        true
+                    } else {
+                        false
                     }
+                } else {
+                    self.list.push(Number("0".into()));
+                    self.list.push(Power);
+                    true
                 }
             }
-            _ => {}
+            Pi | E | Ans => {
+                if matches!(
+                    self.list.last(),
+                    Some(ClosingParenthesis)
+                        | Some(Pi)
+                        | Some(E)
+                        | Some(Ans)
+                        | Some(Rnd(..))
+                        | Some(Percent)
+                        | Some(Factorial)
+                ) {
+                    self.list.push(Multiply);
+                }
+                self.list.push(item);
+                true
+            }
+            Rnd(num) => {
+                if let Some(item) = self.list.last() {
+                    if item.can_put_operation_after() {
+                        self.list.push(Multiply);
+                    }
+                    self.list.push(Rnd(num));
+                } else {
+                    self.list.push(Rnd(num));
+                }
+                true
+            }
+            _ => false,
         }
     }
 
@@ -259,7 +378,7 @@ impl Equation {
                 Factorial => default_layout("!", power_level, "roboto"),
                 OpeningParenthesis => default_layout("(", power_level, "roboto"),
                 ClosingParenthesis => default_layout(")", power_level, "roboto"),
-                Modulus => default_layout(" % ", power_level, "roboto"),
+                Percent => default_layout("%", power_level, "roboto"),
                 Sin => default_layout("sin(", power_level, "roboto"),
                 Ln => default_layout("ln(", power_level, "roboto"),
                 Divide => default_layout(" ÷ ", power_level, "roboto"),
@@ -267,12 +386,17 @@ impl Equation {
                 Cos => default_layout("cos(", power_level, "roboto"),
                 Log => default_layout("log(", power_level, "roboto"),
                 Multiply => default_layout(" × ", power_level, "roboto"),
-                E => default_layout(" e ", power_level, "roboto"),
+                E => default_layout("e", power_level, "roboto"),
                 Tan => default_layout("tan(", power_level, "roboto"),
                 Sqrt => default_layout("√(", power_level, "roboto"),
                 Minus => default_layout(" – ", power_level, "roboto"),
                 EXP => default_layout("E", power_level, "roboto"),
                 Add => default_layout(" + ", power_level, "roboto"),
+                Ans => default_layout("Ans", power_level, "roboto"),
+                Asin => default_layout("arcsin(", power_level, "roboto"),
+                Acos => default_layout("arccos(", power_level, "roboto"),
+                Atan => default_layout("arctan(", power_level, "roboto"),
+                Rnd(num) => default_layout(&num, power_level, "roboto"),
                 Power => {
                     parentheses_counts.push(0);
                     if index == self.list.len() - 1 {
@@ -282,6 +406,7 @@ impl Equation {
                         }
                     }
                 }
+
                 _ => {}
             }
             if let Some(parentheses_count) = parentheses_counts.last_mut() {

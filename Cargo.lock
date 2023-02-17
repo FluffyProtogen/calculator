@@ -401,6 +401,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "rand",
 ]
 
 [[package]]

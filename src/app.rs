@@ -1,6 +1,7 @@
 use eframe::*;
 use egui::{text::LayoutJob, *};
 use egui_extras::RetainedImage;
+use rand::Rng;
 
 use crate::calculator::Equation;
 use crate::calculator::Item::*;
@@ -174,7 +175,7 @@ impl Calculator {
                     self.equation.try_push(ClosingParenthesis);
                 }
                 if calculator_button("%", FUNCTION_COLOR).ui(ui).clicked() {
-                    self.equation.try_push(Modulus);
+                    self.equation.try_push(Percent);
                 }
                 if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
                     todo!()
@@ -205,6 +206,7 @@ impl Calculator {
                         .clicked()
                     {
                         self.equation.try_push(Asin);
+                        self.inverse = false;
                     };
                 } else {
                     if calculator_button("sin", FUNCTION_COLOR).ui(ui).clicked() {
@@ -220,7 +222,10 @@ impl Calculator {
                         .ui(ui)
                         .clicked()
                     {
-                        todo!()
+                        if self.equation.try_push(E) {
+                            self.equation.try_push(Power);
+                        }
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("ln", FUNCTION_COLOR).ui(ui).clicked() {
@@ -254,6 +259,7 @@ impl Calculator {
                         .clicked()
                     {
                         self.equation.try_push(Acos);
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("cos", FUNCTION_COLOR).ui(ui).clicked() {
@@ -268,7 +274,10 @@ impl Calculator {
                         .ui(ui)
                         .clicked()
                     {
-                        todo!()
+                        if self.equation.try_push(Power) {
+                            self.equation.try_push(Number("10".into()));
+                        }
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("log", FUNCTION_COLOR).ui(ui).clicked() {
@@ -301,6 +310,7 @@ impl Calculator {
                         .clicked()
                     {
                         self.equation.try_push(Atan);
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("tan", FUNCTION_COLOR).ui(ui).clicked() {
@@ -316,7 +326,10 @@ impl Calculator {
                         .ui(ui)
                         .clicked()
                     {
-                        todo!();
+                        if self.equation.try_push(Power) {
+                            self.equation.try_push(Number("2".into()));
+                        }
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("√", FUNCTION_COLOR).ui(ui).clicked() {
@@ -339,7 +352,9 @@ impl Calculator {
             ui.horizontal(|ui| {
                 if self.inverse {
                     if calculator_button("Rnd", FUNCTION_COLOR).ui(ui).clicked() {
-                        todo!()
+                        let random = rand::thread_rng().gen::<f64>().to_string();
+                        self.equation.try_push(Rnd(format!("{random:.7}")));
+                        self.inverse = false;
                     }
                 } else {
                     if calculator_button("Ans", FUNCTION_COLOR).ui(ui).clicked() {
@@ -383,6 +398,7 @@ impl Calculator {
                     .clicked()
                     {
                         todo!();
+                        self.inverse = false;
                     }
                 } else {
                     if Button::new(superscript(ui, "x", "y"))
