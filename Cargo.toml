@@ -10,3 +10,4 @@ egui = "0.21.0"
 eframe = "0.21.2"
 egui_extras = {version= "0.21.0", features=["svg"]}
 rand = "0.8.5"
+statrs = "0.16.0"

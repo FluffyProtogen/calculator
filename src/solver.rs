@@ -1,10 +1,8 @@
-use std::ops::Mul;
-
 use crate::calculator::{Equation, Item};
 use Item::*;
 //https://www.geeksforgeeks.org/expression-evaluation/
 pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> f64 {
-    let items = equation.clean();
+    let items = equation.clean(ans);
 
     let mut operation_stack = vec![];
     let mut value_stack = vec![];
@@ -61,7 +59,7 @@ pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> f64 {
                     }
                 }
             }
-            Add | Subtract | Multiply | Divide => {
+            Add | Subtract | Multiply | Divide | Power => {
                 while let Some(last_item) = operation_stack.last() {
                     if last_item.has_precedence_over(&item) && value_stack.len() >= 2 {
                         dbg!(last_item);
@@ -79,6 +77,10 @@ pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> f64 {
                     }
                 }
                 operation_stack.push(item);
+            }
+            Factorial => {
+                let last = value_stack.last_mut().unwrap();
+                *last = statrs::function::gamma::gamma(*last + 1.0);
             }
             _ => {}
         }
@@ -101,6 +103,7 @@ fn evaluate(operation: Item, value1: f64, value2: f64) -> f64 {
         Subtract => value1 - value2,
         Multiply => value1 * value2,
         Divide => value1 / value2,
+        Power => value1.powf(value2),
         _ => todo!(),
     }
 }

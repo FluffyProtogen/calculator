@@ -109,7 +109,7 @@ impl Equation {
         Self { list: vec![] }
     }
 
-    pub fn clean(&self) -> Vec<Item> {
+    pub fn clean(&self, ans: f64) -> Vec<Item> {
         let mut cleaned = vec![];
 
         for item in &self.list {
@@ -117,6 +117,7 @@ impl Equation {
                 Rnd(num) => cleaned.push(Number(num.clone())),
                 Pi => cleaned.push(Number("3.141592653589793238462643383279502884197".into())),
                 E => cleaned.push(Number("2.7182818284590452353602874713527".into())),
+                Ans => cleaned.push(Number(ans.to_string())),
                 Percent => {
                     let last = cleaned.pop().unwrap();
                     cleaned.push(OpeningParenthesis);
@@ -131,6 +132,11 @@ impl Equation {
                     cleaned.push(last);
                     cleaned.push(Factorial);
                     cleaned.push(ClosingParenthesis);
+                }
+                EXP => {
+                    cleaned.push(Multiply);
+                    cleaned.push(Number("10".into()));
+                    cleaned.push(Power);
                 }
                 _ if item.is_opening_parenthesis() => {
                     if let Some(last) = cleaned.last() {
