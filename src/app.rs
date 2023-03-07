@@ -13,6 +13,7 @@ pub struct Calculator {
     equation: Equation,
     history: Vec<(Equation, f64)>,
     previous_answer_state: PreviousAnswerState,
+    animation_time: Option<f32>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -31,6 +32,9 @@ const FONT_SIZE: f32 = 23.0;
 const GRID_SPACING: f32 = 7.5;
 const EQUATION_SIZE: f32 = 39.0;
 const PREVIOUS_SIZE: f32 = 22.0;
+
+const ANIMATION_DURATION: f32 = 0.12;
+
 const ROUNDING: Rounding = {
     let rounding = 6.5;
     Rounding {
@@ -57,7 +61,9 @@ impl App for Calculator {
                         bottom: 10.0,
                     })
                     .show(ui, |ui| {
-                        self.show_current(ui);
+                        ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
+                            ui.label(RichText::new("").size(EQUATION_SIZE));
+                        });
                     });
             });
         CentralPanel::default().show(ctx, |ui| {
@@ -78,6 +84,16 @@ impl App for Calculator {
                 }
             });
         self.show_previous(ctx);
+        self.show_current(ctx);
+
+        if let Some(time) = &mut self.animation_time {
+            if *time < ANIMATION_DURATION {
+                *time += ctx.input(|i| i.stable_dt);
+                ctx.request_repaint();
+            } else {
+                self.animation_time = None;
+            }
+        }
     }
 }
 
@@ -129,6 +145,7 @@ impl Calculator {
             equation: Equation::new(),
             history: vec![],
             previous_answer_state: PreviousAnswerState::Hide,
+            animation_time: None,
         }
     }
 
@@ -204,9 +221,16 @@ impl Calculator {
                     self.equation.try_push(Percent);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
-                    todo!();
-                    self.previous_answer_state = PreviousAnswerState::Hide;
+                if self.previous_answer_state == PreviousAnswerState::Hide {
+                    if calculator_button("CE", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.backspace();
+                        self.previous_answer_state = PreviousAnswerState::Hide;
+                    }
+                } else {
+                    if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
+                        self.equation.clear();
+                        self.previous_answer_state = PreviousAnswerState::Hide;
+                    }
                 }
             });
 
@@ -579,31 +603,55 @@ impl Calculator {
                 self.previous_answer_state = PreviousAnswerState::Error(equation);
             }
         }
+        self.animation_time = Some(0.0);
     }
-    fn show_current(&self, ui: &mut Ui) {
-        ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
-            match &self.previous_answer_state {
-                PreviousAnswerState::Show => {
-                    ui.label(
-                        RichText::new(self.history.last().unwrap().1.to_string())
-                            .size(EQUATION_SIZE),
-                    );
-                }
-                PreviousAnswerState::Hide => {
-                    ui.label(
-                        self.equation
-                            .render(EQUATION_SIZE, ui.visuals().text_color())
-                            .clone(),
-                    );
-                }
-                PreviousAnswerState::Error(equation) => {
-                    ui.label(RichText::new("Error").size(EQUATION_SIZE));
-                }
-            }
-        });
+    fn show_current(&self, ctx: &Context) {
+        let t = self.animation_time.unwrap_or(ANIMATION_DURATION) / ANIMATION_DURATION;
+        let y_position = smoothstep(95.0, 43.0, t);
+        Area::new("current answer")
+            .fixed_pos(pos2(0.0, y_position))
+            .show(ctx, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                    ui.set_clip_rect(Rect {
+                        min: pos2(0.0, 0.0),
+                        max: pos2(ui.max_rect().max.x, 98.0),
+                    });
+
+                    ui.add_space(22.0);
+                    match &self.previous_answer_state {
+                        PreviousAnswerState::Show => {
+                            ui.label(
+                                RichText::new(self.history.last().unwrap().1.to_string())
+                                    .size(EQUATION_SIZE),
+                            );
+                        }
+                        PreviousAnswerState::Hide => {
+                            ui.label(
+                                self.equation
+                                    .render(EQUATION_SIZE, ui.visuals().text_color())
+                                    .clone(),
+                            );
+                        }
+                        PreviousAnswerState::Error(equation) => {
+                            ui.label(RichText::new("Error").size(EQUATION_SIZE));
+                        }
+                    }
+                });
+            });
     }
 
     fn show_previous(&self, ctx: &Context) {
+        let t = self.animation_time.unwrap_or(ANIMATION_DURATION) / ANIMATION_DURATION;
+        let size = smoothstep(EQUATION_SIZE, PREVIOUS_SIZE, t);
+
+        let color = {
+            let color = ctx.style().visuals.text_color();
+            let r = smoothstep(color.r() as f32, PREVIOUS_COLOR.r() as f32, t) as u8;
+            let g = smoothstep(color.g() as f32, PREVIOUS_COLOR.g() as f32, t) as u8;
+            let b = smoothstep(color.b() as f32, PREVIOUS_COLOR.b() as f32, t) as u8;
+            Color32::from_rgb(r, g, b)
+        };
+
         Area::new("previous answer")
             .fixed_pos(pos2(0.0, 12.0))
             .show(ctx, |ui| {
@@ -611,21 +659,13 @@ impl Calculator {
                     ui.add_space(22.0);
                     match &self.previous_answer_state {
                         PreviousAnswerState::Show => {
-                            let mut render = self
-                                .history
-                                .last()
-                                .unwrap()
-                                .0
-                                .render(PREVIOUS_SIZE, PREVIOUS_COLOR);
+                            let mut render = self.history.last().unwrap().0.render(size, color);
                             render.append(
                                 " =",
                                 0.0,
                                 TextFormat {
-                                    font_id: FontId::new(
-                                        PREVIOUS_SIZE,
-                                        FontFamily::Name("roboto".into()),
-                                    ),
-                                    color: PREVIOUS_COLOR,
+                                    font_id: FontId::new(size, FontFamily::Name("roboto".into())),
+                                    color,
                                     ..Default::default()
                                 },
                             );
@@ -635,22 +675,19 @@ impl Calculator {
                             if let Some(last) = self.history.last() {
                                 ui.label(
                                     RichText::new(format!("Ans = {}", last.1.to_string()))
-                                        .size(PREVIOUS_SIZE)
-                                        .color(PREVIOUS_COLOR),
+                                        .size(size)
+                                        .color(color),
                                 );
                             }
                         }
                         PreviousAnswerState::Error(equation) => {
-                            let mut render = equation.render(PREVIOUS_SIZE, PREVIOUS_COLOR);
+                            let mut render = equation.render(size, color);
                             render.append(
                                 " =",
                                 0.0,
                                 TextFormat {
-                                    font_id: FontId::new(
-                                        PREVIOUS_SIZE,
-                                        FontFamily::Name("roboto".into()),
-                                    ),
-                                    color: PREVIOUS_COLOR,
+                                    font_id: FontId::new(size, FontFamily::Name("roboto".into())),
+                                    color,
                                     ..Default::default()
                                 },
                             );
@@ -692,4 +729,10 @@ fn superscript(ui: &Ui, text: &str, superscript_text: &str) -> LayoutJob {
         },
     );
     job
+}
+
+fn smoothstep(start: f32, end: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    let t = -2.0 * t * t * t + 3.0 * t * t;
+    end * t + start * (1.0 - t)
 }

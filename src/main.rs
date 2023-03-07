@@ -9,7 +9,7 @@ use egui::vec2;
 pub mod tests;
 fn main() {
     let options = NativeOptions {
-        initial_window_size: Some(vec2(760.0, 364.0)),
+        initial_window_size: Some(vec2(760.0, 368.5)),
         resizable: false,
         transparent: true,
         ..Default::default()

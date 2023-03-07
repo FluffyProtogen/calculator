@@ -399,6 +399,10 @@ impl Equation {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.list.clear();
+    }
+
     pub fn open_parentheses_count(&self) -> usize {
         self.list
             .iter()

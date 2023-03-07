@@ -23,7 +23,6 @@ pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> Option<f64> {
                     let value2 = value_stack.pop()?;
                     let value1 = value_stack.pop()?;
                     let operation = operation_stack.pop()?;
-                    println!("1: {}, 2: {}, o: {:?}", value1, value2, operation);
                     value_stack.push(evaluate(operation, value1, value2));
                 }
                 if let Some(parenthesis) = operation_stack.pop() {
@@ -66,14 +65,9 @@ pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> Option<f64> {
             Add | Subtract | Multiply | Divide | Power => {
                 while let Some(last_item) = operation_stack.last() {
                     if last_item.has_precedence_over(&item) && value_stack.len() >= 2 {
-                        dbg!(last_item);
-                        dbg!(&item);
-                        println!("{}", last_item.has_precedence_over(&item));
                         let value2 = value_stack.pop()?;
                         let value1 = value_stack.pop()?;
                         let operation = operation_stack.pop()?;
-
-                        println!("1: {}, 2: {}, o: {:?}", value1, value2, operation);
 
                         value_stack.push(evaluate(operation, value1, value2));
                     } else {
@@ -88,8 +82,6 @@ pub fn solve(equation: &Equation, degrees: bool, ans: f64) -> Option<f64> {
             }
             _ => {}
         }
-        dbg!(&value_stack);
-        dbg!(&operation_stack);
     }
 
     for operation in operation_stack.into_iter().rev() {
