@@ -5,11 +5,13 @@ use rand::Rng;
 
 use crate::calculator::Equation;
 use crate::calculator::Item::*;
+use crate::solver;
 pub struct Calculator {
     history_icon: RetainedImage,
     degrees: bool,
     inverse: bool,
     equation: Equation,
+    history: Vec<(Equation, f64)>,
 }
 
 const FUNCTION_COLOR: Color32 = Color32::from_rgb(218, 220, 224);
@@ -120,6 +122,7 @@ impl Calculator {
             )
             .unwrap(),
             equation: Equation::new(),
+            history: vec![],
         }
     }
 
@@ -346,7 +349,7 @@ impl Calculator {
                     self.equation.try_push(Number("3".into()));
                 }
                 if calculator_button("–", FUNCTION_COLOR).ui(ui).clicked() {
-                    self.equation.try_push(Minus);
+                    self.equation.try_push(Subtract);
                 }
             });
             ui.horizontal(|ui| {
@@ -426,7 +429,11 @@ impl Calculator {
                     .ui(ui)
                     .clicked()
                 {
-                    todo!();
+                    solver::solve(
+                        &self.equation,
+                        self.degrees,
+                        self.history.last().map(|history| history.1).unwrap_or(0.0),
+                    );
                 }
 
                 if calculator_button("+", FUNCTION_COLOR).ui(ui).clicked() {

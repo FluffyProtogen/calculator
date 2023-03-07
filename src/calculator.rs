@@ -2,9 +2,8 @@ use egui::{text::LayoutJob, *};
 use Item::*;
 
 const POWER_SCALE: f32 = 0.65;
-const POWER_MAX: usize = 4;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Item {
     Number(String),
     Rnd(String),
@@ -22,7 +21,7 @@ pub enum Item {
     E,
     Tan,
     Sqrt,
-    Minus,
+    Subtract,
     Ans,
     EXP,
     Power,
@@ -34,14 +33,14 @@ pub enum Item {
 }
 
 impl Item {
-    fn is_opening_parenthesis(&self) -> bool {
+    pub fn is_opening_parenthesis(&self) -> bool {
         matches!(
             self,
             OpeningParenthesis | Sin | Ln | Cos | Log | Tan | Sqrt | Asin | Acos | Atan | Nroot
         )
     }
 
-    fn can_put_end_parenthesis_after(&self) -> bool {
+    pub fn can_put_end_parenthesis_after(&self) -> bool {
         match self {
             Number(num) => {
                 if num.len() == 1 {
@@ -59,7 +58,7 @@ impl Item {
         }
     }
 
-    fn can_put_operation_after(&self) -> bool {
+    pub fn can_put_operation_after(&self) -> bool {
         match self {
             Number(num) => {
                 if num.len() == 1 {
@@ -74,6 +73,29 @@ impl Item {
             }
             Percent | Factorial | Pi | E | Ans | ClosingParenthesis | Rnd(..) => true,
             _ => false,
+        }
+    }
+
+    pub fn has_precedence_over(&self, other: &Item) -> bool {
+        if self == other {
+            true
+        } else if self.is_opening_parenthesis() {
+            false
+        } else {
+            match other {
+                _ if other.is_opening_parenthesis() => false,
+                ClosingParenthesis => false,
+                Power => match self {
+                    _ if self.is_opening_parenthesis() => true,
+                    _ => false,
+                },
+                Multiply | Divide => match self {
+                    _ if self.is_opening_parenthesis() => true,
+                    Power => true,
+                    _ => false,
+                },
+                _ => true,
+            }
         }
     }
 }
@@ -85,6 +107,48 @@ pub struct Equation {
 impl Equation {
     pub fn new() -> Self {
         Self { list: vec![] }
+    }
+
+    pub fn clean(&self) -> Vec<Item> {
+        let mut cleaned = vec![];
+
+        for item in &self.list {
+            match item {
+                Rnd(num) => cleaned.push(Number(num.clone())),
+                Pi => cleaned.push(Number("3.141592653589793238462643383279502884197".into())),
+                E => cleaned.push(Number("2.7182818284590452353602874713527".into())),
+                Percent => {
+                    let last = cleaned.pop().unwrap();
+                    cleaned.push(OpeningParenthesis);
+                    cleaned.push(last);
+                    cleaned.push(Divide);
+                    cleaned.push(Number("100".into()));
+                    cleaned.push(ClosingParenthesis);
+                }
+                Factorial => {
+                    let last = cleaned.pop().unwrap();
+                    cleaned.push(OpeningParenthesis);
+                    cleaned.push(last);
+                    cleaned.push(Factorial);
+                    cleaned.push(ClosingParenthesis);
+                }
+                _ if item.is_opening_parenthesis() => {
+                    if let Some(last) = cleaned.last() {
+                        if last.can_put_operation_after() {
+                            cleaned.push(Multiply);
+                        }
+                    }
+                    cleaned.push(item.clone());
+                }
+                _ => cleaned.push(item.clone()),
+            }
+        }
+
+        for _ in 0..self.open_parentheses_count() {
+            cleaned.push(ClosingParenthesis);
+        }
+
+        cleaned
     }
 
     pub fn backspace(&mut self) {
@@ -135,8 +199,7 @@ impl Equation {
             }
             ClosingParenthesis => {
                 if let Some(last) = self.list.last() {
-                    if last.can_put_end_parenthesis_after() && self.open_parentheses_count_at(0) > 0
-                    {
+                    if last.can_put_end_parenthesis_after() && self.open_parentheses_count() > 0 {
                         self.list.push(ClosingParenthesis);
                         true
                     } else {
@@ -196,7 +259,7 @@ impl Equation {
                     if last.can_put_operation_after() {
                         self.list.push(item);
                         true
-                    } else if matches!(last, Add | Multiply | Divide | Minus) {
+                    } else if matches!(last, Add | Multiply | Divide | Subtract) {
                         *last = item;
                         true
                     } else {
@@ -231,7 +294,7 @@ impl Equation {
                     }
                 }
             }
-            Minus => {
+            Subtract => {
                 if let Some(last) = self.list.last_mut() {
                     match last {
                         Number(num) => {
@@ -239,11 +302,11 @@ impl Equation {
                                 if num.chars().nth(0).unwrap() == '-' {
                                     false
                                 } else {
-                                    self.list.push(Minus);
+                                    self.list.push(Subtract);
                                     true
                                 }
                             } else {
-                                self.list.push(Minus);
+                                self.list.push(Subtract);
                                 true
                             }
                         }
@@ -252,7 +315,7 @@ impl Equation {
                             true
                         }
                         Add => {
-                            *last = Minus;
+                            *last = Subtract;
                             true
                         }
                         _ if last.is_opening_parenthesis() => {
@@ -260,7 +323,7 @@ impl Equation {
                             true
                         }
                         _ if last.can_put_end_parenthesis_after() => {
-                            self.list.push(Minus);
+                            self.list.push(Subtract);
                             true
                         }
                         _ => false,
@@ -311,14 +374,27 @@ impl Equation {
                 }
                 true
             }
+            EXP => {
+                if let Some(Number(num)) = self.list.last().as_ref() {
+                    if num == "." {
+                        false
+                    } else if num == "-" {
+                        false
+                    } else {
+                        self.list.push(EXP);
+                        true
+                    }
+                } else {
+                    false
+                }
+            }
             _ => false,
         }
     }
 
-    fn open_parentheses_count_at(&self, position: usize) -> usize {
+    fn open_parentheses_count(&self) -> usize {
         self.list
             .iter()
-            .skip(position)
             .filter(|item| item.is_opening_parenthesis())
             .count()
             - self
@@ -389,7 +465,7 @@ impl Equation {
                 E => default_layout("e", power_level, "roboto"),
                 Tan => default_layout("tan(", power_level, "roboto"),
                 Sqrt => default_layout("√(", power_level, "roboto"),
-                Minus => default_layout(" – ", power_level, "roboto"),
+                Subtract => default_layout(" – ", power_level, "roboto"),
                 EXP => default_layout("E", power_level, "roboto"),
                 Add => default_layout(" + ", power_level, "roboto"),
                 Ans => default_layout("Ans", power_level, "roboto"),
