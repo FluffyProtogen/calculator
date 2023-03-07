@@ -100,6 +100,7 @@ impl Item {
     }
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct Equation {
     list: Vec<Item>,
 }
@@ -398,7 +399,7 @@ impl Equation {
         }
     }
 
-    fn open_parentheses_count(&self) -> usize {
+    pub fn open_parentheses_count(&self) -> usize {
         self.list
             .iter()
             .filter(|item| item.is_opening_parenthesis())
@@ -512,7 +513,7 @@ impl Equation {
         for (level, open_parens) in level_open_parentheses_counts.iter().rev().enumerate() {
             let level =
                 (level_open_parentheses_counts.len() as i32 - level as i32 - 1).clamp(0, i32::MAX);
-            for i in 0..*open_parens {
+            for _ in 0..*open_parens {
                 job.append(
                     ")",
                     0.0,

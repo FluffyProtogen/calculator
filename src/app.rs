@@ -12,15 +12,25 @@ pub struct Calculator {
     inverse: bool,
     equation: Equation,
     history: Vec<(Equation, f64)>,
+    previous_answer_state: PreviousAnswerState,
+}
+
+#[derive(PartialEq, Debug)]
+enum PreviousAnswerState {
+    Show,
+    Hide,
+    Error(Equation),
 }
 
 const FUNCTION_COLOR: Color32 = Color32::from_rgb(218, 220, 224);
 const NUMBER_COLOR: Color32 = Color32::from_rgb(233, 235, 236);
+const PREVIOUS_COLOR: Color32 = Color32::from_rgb(112, 117, 122);
 const BUTTON_WIDTH: f32 = 100.0;
 const BUTTON_HEIGHT: f32 = 45.0;
 const FONT_SIZE: f32 = 23.0;
 const GRID_SPACING: f32 = 7.5;
-const EQUATION_SIZE: f32 = 33.0;
+const EQUATION_SIZE: f32 = 39.0;
+const PREVIOUS_SIZE: f32 = 22.0;
 const ROUNDING: Rounding = {
     let rounding = 6.5;
     Rounding {
@@ -47,13 +57,7 @@ impl App for Calculator {
                         bottom: 10.0,
                     })
                     .show(ui, |ui| {
-                        ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
-                            ui.label(
-                                self.equation
-                                    .render(EQUATION_SIZE, ui.visuals().text_color())
-                                    .clone(),
-                            );
-                        });
+                        self.show_current(ui);
                     });
             });
         CentralPanel::default().show(ctx, |ui| {
@@ -73,6 +77,7 @@ impl App for Calculator {
                     println!("F");
                 }
             });
+        self.show_previous(ctx);
     }
 }
 
@@ -123,6 +128,7 @@ impl Calculator {
             .unwrap(),
             equation: Equation::new(),
             history: vec![],
+            previous_answer_state: PreviousAnswerState::Hide,
         }
     }
 
@@ -130,36 +136,50 @@ impl Calculator {
         use Key::*;
         if ctx.input(|i| i.key_pressed(Num1)) {
             self.equation.try_push(Number("1".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num2)) {
             self.equation.try_push(Number("2".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num3)) {
             self.equation.try_push(Number("3".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num4)) {
             self.equation.try_push(Number("4".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num5)) {
             self.equation.try_push(Number("5".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num6)) {
             self.equation.try_push(Number("6".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num7)) {
             self.equation.try_push(Number("7".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num8)) {
             self.equation.try_push(Number("8".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num9)) {
             self.equation.try_push(Number("9".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Num0)) {
             self.equation.try_push(Number("0".into()));
+            self.previous_answer_state = PreviousAnswerState::Hide;
         }
         if ctx.input(|i| i.key_pressed(Backspace)) {
             self.equation.backspace();
+            self.previous_answer_state = PreviousAnswerState::Hide;
+        }
+        if ctx.input(|i| i.key_pressed(Enter)) {
+            self.solve();
         }
     }
 
@@ -170,18 +190,23 @@ impl Calculator {
                 self.rad_deg_buttons(ui);
                 if calculator_button("x!", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Factorial);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("(", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(OpeningParenthesis);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button(")", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(ClosingParenthesis);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("%", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Percent);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
-                    todo!()
+                    todo!();
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
 
@@ -210,10 +235,12 @@ impl Calculator {
                     {
                         self.equation.try_push(Asin);
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     };
                 } else {
                     if calculator_button("sin", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Sin);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
@@ -229,28 +256,35 @@ impl Calculator {
                             self.equation.try_push(Power);
                         }
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("ln", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Ln);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if calculator_button("7", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("7".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("8", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("8".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("9", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("9".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("÷", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Divide);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
                 if calculator_button("π", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Pi);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
                 if self.inverse {
@@ -263,10 +297,12 @@ impl Calculator {
                     {
                         self.equation.try_push(Acos);
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("cos", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Cos);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if self.inverse {
@@ -281,28 +317,35 @@ impl Calculator {
                             self.equation.try_push(Number("10".into()));
                         }
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("log", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Log);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if calculator_button("4", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("4".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("5", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("5".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("6", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("6".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("×", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Multiply);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
                 if calculator_button("e", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(E);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if self.inverse {
                     if Button::new(superscript(ui, "tan", "-1"))
@@ -314,10 +357,12 @@ impl Calculator {
                     {
                         self.equation.try_push(Atan);
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("tan", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Tan);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
@@ -333,23 +378,29 @@ impl Calculator {
                             self.equation.try_push(Number("2".into()));
                         }
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("√", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Sqrt);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if calculator_button("1", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("1".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("2", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("2".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("3", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("3".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button("–", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Subtract);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
@@ -358,14 +409,17 @@ impl Calculator {
                         let random = rand::thread_rng().gen::<f64>().to_string();
                         self.equation.try_push(Rnd(format!("{random:.7}")));
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if calculator_button("Ans", FUNCTION_COLOR).ui(ui).clicked() {
                         self.equation.try_push(Ans);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if calculator_button("EXP", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(EXP);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
                 if self.inverse {
@@ -402,6 +456,7 @@ impl Calculator {
                     {
                         todo!();
                         self.inverse = false;
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
                     if Button::new(superscript(ui, "x", "y"))
@@ -412,14 +467,17 @@ impl Calculator {
                         .clicked()
                     {
                         self.equation.try_push(Power);
+                        self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
                 if calculator_button("0", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number("0".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if calculator_button(".", NUMBER_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Number(".".into()));
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
                 if Button::new(RichText::new("=").size(FONT_SIZE).color(Color32::WHITE))
@@ -429,15 +487,12 @@ impl Calculator {
                     .ui(ui)
                     .clicked()
                 {
-                    solver::solve(
-                        &self.equation,
-                        self.degrees,
-                        self.history.last().map(|history| history.1).unwrap_or(0.0),
-                    );
+                    self.solve();
                 }
 
                 if calculator_button("+", FUNCTION_COLOR).ui(ui).clicked() {
                     self.equation.try_push(Add);
+                    self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
         });
@@ -495,6 +550,115 @@ impl Calculator {
         if response.clicked() {
             self.degrees = !self.degrees;
         }
+    }
+
+    fn solve(&mut self) {
+        if self.previous_answer_state != PreviousAnswerState::Show {
+            let answer = solver::solve(
+                &self.equation,
+                self.degrees,
+                self.history.last().map(|history| history.1).unwrap_or(0.0),
+            );
+
+            for _ in 0..self.equation.open_parentheses_count() {
+                self.equation.try_push(ClosingParenthesis);
+            }
+
+            let equation = std::mem::replace(&mut self.equation, Equation::new());
+
+            if let Some(answer) = answer {
+                self.previous_answer_state = PreviousAnswerState::Show;
+                if let Some(last) = self.history.last() {
+                    if last.0 != equation {
+                        self.history.push((equation, answer));
+                    }
+                } else {
+                    self.history.push((equation, answer));
+                }
+            } else {
+                self.previous_answer_state = PreviousAnswerState::Error(equation);
+            }
+        }
+    }
+    fn show_current(&self, ui: &mut Ui) {
+        ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
+            match &self.previous_answer_state {
+                PreviousAnswerState::Show => {
+                    ui.label(
+                        RichText::new(self.history.last().unwrap().1.to_string())
+                            .size(EQUATION_SIZE),
+                    );
+                }
+                PreviousAnswerState::Hide => {
+                    ui.label(
+                        self.equation
+                            .render(EQUATION_SIZE, ui.visuals().text_color())
+                            .clone(),
+                    );
+                }
+                PreviousAnswerState::Error(equation) => {
+                    ui.label(RichText::new("Error").size(EQUATION_SIZE));
+                }
+            }
+        });
+    }
+
+    fn show_previous(&self, ctx: &Context) {
+        Area::new("previous answer")
+            .fixed_pos(pos2(0.0, 12.0))
+            .show(ctx, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                    ui.add_space(22.0);
+                    match &self.previous_answer_state {
+                        PreviousAnswerState::Show => {
+                            let mut render = self
+                                .history
+                                .last()
+                                .unwrap()
+                                .0
+                                .render(PREVIOUS_SIZE, PREVIOUS_COLOR);
+                            render.append(
+                                " =",
+                                0.0,
+                                TextFormat {
+                                    font_id: FontId::new(
+                                        PREVIOUS_SIZE,
+                                        FontFamily::Name("roboto".into()),
+                                    ),
+                                    color: PREVIOUS_COLOR,
+                                    ..Default::default()
+                                },
+                            );
+                            ui.label(render);
+                        }
+                        PreviousAnswerState::Hide => {
+                            if let Some(last) = self.history.last() {
+                                ui.label(
+                                    RichText::new(format!("Ans = {}", last.1.to_string()))
+                                        .size(PREVIOUS_SIZE)
+                                        .color(PREVIOUS_COLOR),
+                                );
+                            }
+                        }
+                        PreviousAnswerState::Error(equation) => {
+                            let mut render = equation.render(PREVIOUS_SIZE, PREVIOUS_COLOR);
+                            render.append(
+                                " =",
+                                0.0,
+                                TextFormat {
+                                    font_id: FontId::new(
+                                        PREVIOUS_SIZE,
+                                        FontFamily::Name("roboto".into()),
+                                    ),
+                                    color: PREVIOUS_COLOR,
+                                    ..Default::default()
+                                },
+                            );
+                            ui.label(render);
+                        }
+                    }
+                });
+            });
     }
 }
 

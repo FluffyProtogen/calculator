@@ -6,7 +6,7 @@ use crate::solver::solve;
 #[test]
 fn add() {
     let equation = equation![Number("1".into()), Add, Number("2".into())];
-    assert_eq!(solve(&equation, true, 0.0), 3.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(3.0));
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn order_of_operations1() {
         Subtract,
         Number("2".into())
     ];
-    assert_eq!(solve(&equation, true, 0.0), 9.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(9.0));
 }
 
 #[test]
@@ -31,7 +31,7 @@ fn parentheses1() {
         Add,
         Number("2".into())
     ];
-    assert_eq!(solve(&equation, true, 0.0), 3.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(3.0));
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn parentheses2() {
         Multiply,
         Number("3".into())
     ];
-    assert_eq!(solve(&equation, true, 0.0), 7.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(7.0));
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn parentheses3() {
         Add,
         Number("1".into())
     ];
-    assert_eq!(solve(&equation, true, 0.0), 19.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(19.0));
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn parentheses4() {
         Number("2".into()),
         ClosingParenthesis
     ];
-    assert_eq!(solve(&equation, true, 0.0), 5.0);
+    assert_eq!(solve(&equation, true, 0.0), Some(5.0));
 }
 
 #[macro_export]
