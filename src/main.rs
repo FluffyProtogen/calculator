@@ -1,7 +1,7 @@
 pub mod app;
 pub mod calculator;
+pub mod calculator_button;
 pub mod solver;
-
 use eframe::*;
 use egui::vec2;
 

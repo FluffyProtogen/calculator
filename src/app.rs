@@ -6,6 +6,7 @@ use rand::Rng;
 
 use crate::calculator::Equation;
 use crate::calculator::Item::*;
+use crate::calculator_button::CalculatorButton;
 use crate::solver;
 pub struct Calculator {
     history_icon: RetainedImage,
@@ -25,19 +26,19 @@ enum PreviousAnswerState {
     Error(Equation),
 }
 
-const FUNCTION_COLOR: Color32 = Color32::from_rgb(218, 220, 224);
-const NUMBER_COLOR: Color32 = Color32::from_rgb(233, 235, 236);
-const PREVIOUS_COLOR: Color32 = Color32::from_rgb(112, 117, 122);
-const BUTTON_WIDTH: f32 = 100.0;
-const BUTTON_HEIGHT: f32 = 45.0;
-const FONT_SIZE: f32 = 23.0;
-const GRID_SPACING: f32 = 7.5;
-const EQUATION_SIZE: f32 = 39.0;
-const PREVIOUS_SIZE: f32 = 22.0;
+pub const FUNCTION_COLOR: Color32 = Color32::from_rgb(218, 220, 224);
+pub const NUMBER_COLOR: Color32 = Color32::from_rgb(233, 235, 236);
+pub const PREVIOUS_COLOR: Color32 = Color32::from_rgb(112, 117, 122);
+pub const BUTTON_WIDTH: f32 = 100.0;
+pub const BUTTON_HEIGHT: f32 = 45.0;
+pub const FONT_SIZE: f32 = 23.0;
+pub const GRID_SPACING: f32 = 7.5;
+pub const EQUATION_SIZE: f32 = 39.0;
+pub const PREVIOUS_SIZE: f32 = 22.0;
 
-const ANIMATION_DURATION: f32 = 0.14;
+pub const ANIMATION_DURATION: f32 = 0.14;
 
-const ROUNDING: Rounding = {
+pub const ROUNDING: Rounding = {
     let rounding = 6.5;
     Rounding {
         nw: rounding,
@@ -223,29 +224,47 @@ impl Calculator {
             ui.spacing_mut().item_spacing = vec2(GRID_SPACING, GRID_SPACING);
             ui.horizontal(|ui| {
                 self.rad_deg_buttons(ui);
-                if calculator_button("x!", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("x!", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Factorial);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("(", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("(", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(OpeningParenthesis);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button(")", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new(")", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(ClosingParenthesis);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("%", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("%", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Percent);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if self.previous_answer_state == PreviousAnswerState::Hide {
-                    if calculator_button("CE", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("CE", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.backspace();
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("AC", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("AC", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.clear();
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
@@ -253,7 +272,7 @@ impl Calculator {
             });
 
             ui.horizontal(|ui| {
-                if calculator_button(
+                if CalculatorButton::new(
                     "Inv",
                     if self.inverse {
                         NUMBER_COLOR
@@ -262,39 +281,34 @@ impl Calculator {
                     },
                 )
                 .ui(ui)
-                .clicked()
+                .clicked_or_drag_ended()
                 {
                     self.inverse = !self.inverse;
                 }
 
                 if self.inverse {
-                    if Button::new(superscript(ui, "sin", "-1"))
-                        .fill(FUNCTION_COLOR)
-                        .stroke(Stroke::NONE)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "sin", "-1"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         self.equation.try_push(Asin);
                         self.inverse = false;
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     };
                 } else {
-                    if calculator_button("sin", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("sin", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Sin);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
                 if self.inverse {
-                    if Button::new(superscript(ui, "e", "x"))
-                        .fill(FUNCTION_COLOR)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .stroke(Stroke::NONE)
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "e", "x"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         if self.equation.try_push(E) {
                             self.equation.try_push(Power);
@@ -303,61 +317,74 @@ impl Calculator {
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("ln", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("ln", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Ln);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
-                if calculator_button("7", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("7", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("7".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("8", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("8", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("8".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("9", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("9", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("9".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("÷", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("÷", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Divide);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
-                if calculator_button("π", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("π", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Pi);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
                 if self.inverse {
-                    if Button::new(superscript(ui, "cos", "-1"))
-                        .fill(FUNCTION_COLOR)
-                        .stroke(Stroke::NONE)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "cos", "-1"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         self.equation.try_push(Acos);
                         self.inverse = false;
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("cos", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("cos", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Cos);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
                 if self.inverse {
-                    if Button::new(superscript(ui, "x", "10"))
-                        .fill(FUNCTION_COLOR)
-                        .stroke(Stroke::NONE)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "x", "10"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         if self.equation.try_push(Power) {
                             self.equation.try_push(Number("10".into()));
@@ -366,61 +393,74 @@ impl Calculator {
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("log", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("log", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Log);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
-                if calculator_button("4", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("4", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("4".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("5", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("5", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("5".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("6", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("6", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("6".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("×", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("×", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Multiply);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
-                if calculator_button("e", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("e", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(E);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
                 if self.inverse {
-                    if Button::new(superscript(ui, "tan", "-1"))
-                        .fill(FUNCTION_COLOR)
-                        .stroke(Stroke::NONE)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "tan", "-1"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         self.equation.try_push(Atan);
                         self.inverse = false;
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("tan", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("tan", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Tan);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
                 if self.inverse {
-                    if Button::new(superscript(ui, "x", "2"))
-                        .fill(FUNCTION_COLOR)
-                        .stroke(Stroke::NONE)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "x", "2"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         if self.equation.try_push(Power) {
                             self.equation.try_push(Number("2".into()));
@@ -429,119 +469,149 @@ impl Calculator {
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("√", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("√", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Sqrt);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
-                if calculator_button("1", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("1", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("1".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("2", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("2", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("2".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("3", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("3", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("3".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button("–", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("–", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Subtract);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
             });
             ui.horizontal(|ui| {
                 if self.inverse {
-                    if calculator_button("Rnd", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("Rnd", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         let random = rand::thread_rng().gen::<f64>().to_string();
                         self.equation.try_push(Rnd(format!("{random:.7}")));
                         self.inverse = false;
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if calculator_button("Ans", FUNCTION_COLOR).ui(ui).clicked() {
+                    if CalculatorButton::new("Ans", FUNCTION_COLOR)
+                        .ui(ui)
+                        .clicked_or_drag_ended()
+                    {
                         self.equation.try_push(Ans);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
-                if calculator_button("EXP", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("EXP", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(EXP);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
                 if self.inverse {
-                    if Button::new({
-                        let mut job = LayoutJob::default();
-                        job.append(
-                            "y",
-                            1.0,
-                            TextFormat {
-                                font_id: FontId::new(12.0, FontFamily::Name("roboto".into())),
-                                valign: Align::TOP,
-                                color: ui.visuals().text_color(),
-                                ..Default::default()
-                            },
-                        );
-                        job.append(
-                            "√x",
-                            0.0,
-                            TextFormat {
-                                font_id: FontId::new(FONT_SIZE, FontFamily::Name("roboto".into())),
-                                valign: Align::TOP,
-                                color: ui.visuals().text_color(),
-                                ..Default::default()
-                            },
-                        );
+                    if CalculatorButton::new(
+                        {
+                            let mut job = LayoutJob::default();
+                            job.append(
+                                "y",
+                                1.0,
+                                TextFormat {
+                                    font_id: FontId::new(12.0, FontFamily::Name("roboto".into())),
+                                    valign: Align::TOP,
+                                    color: ui.visuals().text_color(),
+                                    ..Default::default()
+                                },
+                            );
+                            job.append(
+                                "√x",
+                                0.0,
+                                TextFormat {
+                                    font_id: FontId::new(
+                                        FONT_SIZE,
+                                        FontFamily::Name("roboto".into()),
+                                    ),
+                                    valign: Align::TOP,
+                                    color: ui.visuals().text_color(),
+                                    ..Default::default()
+                                },
+                            );
 
-                        job
-                    })
-                    .fill(FUNCTION_COLOR)
-                    .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                    .rounding(ROUNDING)
-                    .stroke(Stroke::NONE)
+                            job
+                        },
+                        FUNCTION_COLOR,
+                    )
                     .ui(ui)
-                    .clicked()
+                    .clicked_or_drag_ended()
                     {
                         todo!();
                         self.inverse = false;
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 } else {
-                    if Button::new(superscript(ui, "x", "y"))
-                        .stroke(Stroke::NONE)
-                        .fill(FUNCTION_COLOR)
-                        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                        .rounding(ROUNDING)
+                    if CalculatorButton::new(superscript(ui, "x", "y"), FUNCTION_COLOR)
                         .ui(ui)
-                        .clicked()
+                        .clicked_or_drag_ended()
                     {
                         self.equation.try_push(Power);
                         self.previous_answer_state = PreviousAnswerState::Hide;
                     }
                 }
 
-                if calculator_button("0", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("0", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number("0".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
-                if calculator_button(".", NUMBER_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new(".", NUMBER_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Number(".".into()));
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
 
-                if Button::new(RichText::new("=").size(FONT_SIZE).color(Color32::WHITE))
-                    .fill(Color32::from_rgb(66, 133, 244))
-                    .stroke(Stroke::NONE)
-                    .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-                    .rounding(ROUNDING)
-                    .ui(ui)
-                    .clicked()
+                if CalculatorButton::new(
+                    RichText::new("=").size(FONT_SIZE).color(Color32::WHITE),
+                    Color32::from_rgb(66, 133, 244),
+                )
+                .ui(ui)
+                .clicked_or_drag_ended()
                 {
                     self.solve();
                 }
 
-                if calculator_button("+", FUNCTION_COLOR).ui(ui).clicked() {
+                if CalculatorButton::new("+", FUNCTION_COLOR)
+                    .ui(ui)
+                    .clicked_or_drag_ended()
+                {
                     self.equation.try_push(Add);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
@@ -582,11 +652,8 @@ impl Calculator {
             );
             job
         };
-        let response = Button::new(job)
-            .fill(FUNCTION_COLOR)
+        let response = CalculatorButton::new(job, FUNCTION_COLOR)
             .min_size(vec2(BUTTON_WIDTH * 2.0 + GRID_SPACING, BUTTON_HEIGHT))
-            .rounding(ROUNDING)
-            .stroke(Stroke::NONE)
             .ui(ui);
         let painter = ui.painter_at(response.rect);
         painter.rect(
@@ -599,7 +666,7 @@ impl Calculator {
             Stroke::NONE,
         );
 
-        if response.clicked() {
+        if response.clicked_or_drag_ended() {
             self.degrees = !self.degrees;
         }
     }
@@ -741,7 +808,7 @@ impl Calculator {
                 )
                 .frame(false)
                 .ui(ui)
-                .clicked()
+                .clicked_or_drag_ended()
                 {
                     self.show_history_menu = true;
                 }
@@ -821,14 +888,6 @@ impl Calculator {
     }
 }
 
-fn calculator_button(text: &str, color: Color32) -> Button {
-    Button::new(RichText::new(text).size(FONT_SIZE))
-        .fill(color)
-        .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
-        .rounding(ROUNDING)
-        .stroke(Stroke::NONE)
-}
-
 fn superscript(ui: &Ui, text: &str, superscript_text: &str) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.append(
@@ -869,12 +928,15 @@ fn format_number(num: f64) -> String {
         let e = integer_digits - 1;
         let num = num / 10.0f64.powf((integer_digits - 1) as f64);
         format!("{num:.7}e+{e}")
+    }
+}
 
-        // let num = num / 10.0f64.powf((integer_digits - 2) as f64);
-        // num.to_string()
-        //     .chars()
-        //     .take(if num < 0.0 { 10 } else { 9 })
-        //     .collect::<String>()
-        //     + &format!("e+{}", integer_digits - 1)
+pub trait Fluff {
+    fn clicked_or_drag_ended(&self) -> bool;
+}
+
+impl Fluff for Response {
+    fn clicked_or_drag_ended(&self) -> bool {
+        self.clicked() || (self.drag_released() && self.hovered())
     }
 }
