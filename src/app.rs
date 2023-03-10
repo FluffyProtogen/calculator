@@ -208,14 +208,17 @@ impl Calculator {
             };
             self.equation.try_push(item);
             self.previous_answer_state = PreviousAnswerState::Hide;
+            self.show_history_menu = false;
         }
 
         if ctx.input(|i| i.key_pressed(Key::Backspace)) {
             self.equation.backspace();
             self.previous_answer_state = PreviousAnswerState::Hide;
+            self.show_history_menu = false;
         }
         if ctx.input(|i| i.key_pressed(Key::Enter)) {
             self.solve();
+            self.show_history_menu = false;
         }
     }
 
@@ -798,19 +801,22 @@ impl Calculator {
     }
 
     fn show_history(&mut self, ctx: &Context) {
+        let mut just_opened = false;
+
         Area::new("history button")
             .fixed_pos(pos2(17.0, 12.0))
             .order(Order::Foreground)
+            .interactable(!self.show_history_menu)
             .show(ctx, |ui| {
-                if ImageButton::new(
+                let response = ImageButton::new(
                     self.history_icon.texture_id(ctx),
                     self.history_icon.size_vec2(),
                 )
                 .frame(false)
-                .ui(ui)
-                .clicked_or_drag_ended()
-                {
+                .ui(ui);
+                if response.clicked_or_drag_ended() {
                     self.show_history_menu = true;
+                    just_opened = true;
                 }
             });
         if self.show_history_menu {
@@ -820,8 +826,8 @@ impl Calculator {
                     egui::containers::Frame::none()
                         .fill(Color32::WHITE)
                         .shadow(Shadow {
-                            extrusion: 3.5,
-                            color: Color32::from_rgba_premultiplied(0, 0, 0, 35),
+                            extrusion: 5.5,
+                            color: Color32::from_rgba_premultiplied(0, 0, 0, 40),
                         })
                         .rounding(ROUNDING)
                         .inner_margin(Margin {
@@ -840,49 +846,82 @@ impl Calculator {
                                 ui.allocate_space(vec2(0.0, 30.0));
                                 ui.separator();
 
-                                //ui.allocate_space(vec2(0.0, 10.0));
-                                ScrollArea::vertical()
-                                    .stick_to_right(true)
-                                    .max_width(450.0)
-                                    .show(ui, |ui| {
-                                        for (equation, answer) in &self.history {
-                                            ui.horizontal(|ui| {
-                                                Button::new(equation.render(
+                                ScrollArea::vertical().max_width(450.0).show(ui, |ui| {
+                                    ui.allocate_space(vec2(ui.available_width(), 14.0));
+                                    for (equation, answer) in &self.history {
+                                        ui.horizontal(|ui| {
+                                            if CalculatorButton::new(
+                                                equation.render(
                                                     FONT_SIZE,
                                                     Color32::from_rgb(66, 133, 244),
-                                                ))
-                                                .fill(Color32::TRANSPARENT)
-                                                .min_size(vec2(BUTTON_HEIGHT, BUTTON_HEIGHT))
-                                                .rounding(ROUNDING)
-                                                .stroke(Stroke::new(1.2, FUNCTION_COLOR))
-                                                .ui(ui);
+                                                ),
+                                                Color32::TRANSPARENT,
+                                            )
+                                            .stroke(Stroke::new(1.2, FUNCTION_COLOR))
+                                            .min_size(vec2(0.0, BUTTON_HEIGHT))
+                                            .padding(vec2(9.0, 0.0))
+                                            .max_text_width(200.0)
+                                            .hover_fill(Color32::from_rgb(247, 248, 248))
+                                            .click_fill(Color32::from_rgb(232, 240, 254))
+                                            .click_stroke(Stroke::new(
+                                                1.2,
+                                                Color32::from_rgb(210, 227, 252),
+                                            ))
+                                            .ui(ui)
+                                            .clicked()
+                                            {
+                                                self.previous_answer_state =
+                                                    PreviousAnswerState::Hide;
+                                                self.show_history_menu = false;
+                                                self.equation = equation.clone();
+                                            }
 
-                                                ui.add_space(2.5);
+                                            ui.add_space(2.5);
 
-                                                ui.label(
-                                                    RichText::new("=")
-                                                        .color(PREVIOUS_COLOR)
-                                                        .size(28.0),
-                                                );
+                                            ui.label(
+                                                RichText::new("=").color(PREVIOUS_COLOR).size(28.0),
+                                            );
 
-                                                ui.add_space(2.5);
+                                            ui.add_space(2.5);
 
-                                                Button::new(
-                                                    RichText::new(format_number(*answer))
-                                                        .color(Color32::from_rgb(66, 133, 244)),
-                                                )
-                                                .fill(Color32::TRANSPARENT)
-                                                .min_size(vec2(BUTTON_HEIGHT, BUTTON_HEIGHT))
-                                                .rounding(ROUNDING)
-                                                .stroke(Stroke::new(1.2, FUNCTION_COLOR))
-                                                .ui(ui);
-                                            });
-                                            ui.add_space(1.7);
-                                        }
-                                    });
+                                            let response = CalculatorButton::new(
+                                                RichText::new(format_number(*answer))
+                                                    .color(Color32::from_rgb(66, 133, 244)),
+                                                Color32::TRANSPARENT,
+                                            )
+                                            .stroke(Stroke::new(1.2, FUNCTION_COLOR))
+                                            .min_size(vec2(0.0, BUTTON_HEIGHT))
+                                            .padding(vec2(9.0, 0.0))
+                                            .hover_fill(Color32::from_rgb(247, 248, 248))
+                                            .click_fill(Color32::from_rgb(232, 240, 254))
+                                            .click_stroke(Stroke::new(
+                                                1.2,
+                                                Color32::from_rgb(210, 227, 252),
+                                            ))
+                                            .ui(ui);
+                                            if response.clicked() {
+                                                self.previous_answer_state =
+                                                    PreviousAnswerState::Hide;
+                                                self.show_history_menu = false;
+                                                self.equation = Equation::new();
+                                                self.equation.try_push(Rnd(format_number(*answer)));
+                                            }
+
+                                            if just_opened {
+                                                response.scroll_to_me(None);
+                                            }
+                                        });
+
+                                        ui.add_space(18.0);
+                                    }
+                                });
+                            }
+
+                            let rect = ui.max_rect().expand(25.0);
+                            if !just_opened && !ui.rect_contains_pointer(rect) {
+                                self.show_history_menu = false;
                             }
                         });
-                    //ui.with_layout(cent, add_contents)
                 });
         }
     }
