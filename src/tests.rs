@@ -87,13 +87,13 @@ fn parentheses4() {
 
 #[macro_export]
 macro_rules! equation {
-        ($($item:expr),*) => {
-            {
-                let mut equation = Equation::new();
-                $(
-                    equation.try_push($item);
-                )*
-                equation
-            }
+    ($($item:expr),*) => {
+        {
+            let mut equation = Equation::new();
+            $(
+                equation.try_push($item);
+            )*
+            equation
         }
     }
+}

@@ -110,6 +110,10 @@ impl Equation {
         Self { list: vec![] }
     }
 
+    pub fn contains_ans(&self) -> bool {
+        self.list.contains(&Ans)
+    }
+
     pub fn clean(&self, ans: f64) -> Vec<Item> {
         let mut cleaned = vec![];
 

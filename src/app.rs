@@ -1,3 +1,4 @@
+use eframe::epaint::Shadow;
 use eframe::*;
 use egui::{text::LayoutJob, *};
 use egui_extras::RetainedImage;
@@ -14,6 +15,7 @@ pub struct Calculator {
     history: Vec<(Equation, f64)>,
     previous_answer_state: PreviousAnswerState,
     animation_time: Option<f32>,
+    show_history_menu: bool,
 }
 
 #[derive(PartialEq, Debug)]
@@ -33,7 +35,7 @@ const GRID_SPACING: f32 = 7.5;
 const EQUATION_SIZE: f32 = 39.0;
 const PREVIOUS_SIZE: f32 = 22.0;
 
-const ANIMATION_DURATION: f32 = 0.12;
+const ANIMATION_DURATION: f32 = 0.14;
 
 const ROUNDING: Rounding = {
     let rounding = 6.5;
@@ -52,7 +54,7 @@ impl App for Calculator {
             .show_separator_line(false)
             .show(ctx, |ui| {
                 egui::containers::Frame::none()
-                    .stroke(Stroke::new(2.0, Color32::from_rgb(218, 220, 224)))
+                    .stroke(Stroke::new(2.0, FUNCTION_COLOR))
                     .rounding(ROUNDING)
                     .inner_margin(Margin {
                         left: 15.0,
@@ -69,20 +71,7 @@ impl App for Calculator {
         CentralPanel::default().show(ctx, |ui| {
             self.buttons(ui);
         });
-        Area::new("history")
-            .fixed_pos(pos2(17.0, 12.0))
-            .show(ctx, |ui| {
-                if ImageButton::new(
-                    self.history_icon.texture_id(ctx),
-                    self.history_icon.size_vec2(),
-                )
-                .frame(false)
-                .ui(ui)
-                .clicked()
-                {
-                    println!("F");
-                }
-            });
+        self.show_history(ctx);
         self.show_previous(ctx);
         self.show_current(ctx);
 
@@ -146,56 +135,85 @@ impl Calculator {
             history: vec![],
             previous_answer_state: PreviousAnswerState::Hide,
             animation_time: None,
+            show_history_menu: false,
         }
     }
 
     fn handle_key_presses(&mut self, ctx: &Context) {
-        use Key::*;
-        if ctx.input(|i| i.key_pressed(Num1)) {
-            self.equation.try_push(Number("1".into()));
+        let keys = ctx.input(|i| {
+            i.raw
+                .events
+                .iter()
+                .filter_map(|item| {
+                    if let Event::Text(text) = item {
+                        Some(text.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        });
+
+        for key in keys {
+            let item = match key.as_str() {
+                "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "0" | "." => {
+                    Number(key.into())
+                }
+                "+" => Add,
+                "-" => Subtract,
+                "*" => Multiply,
+                "/" => Divide,
+                "!" => Factorial,
+                "%" => Percent,
+                "^" => Power,
+                "(" => OpeningParenthesis,
+                ")" => ClosingParenthesis,
+                "q" => Sqrt,
+                "e" => E,
+                "r" => Nroot,
+                "t" => {
+                    if self.inverse {
+                        self.inverse = false;
+                        Atan
+                    } else {
+                        Tan
+                    }
+                }
+                "p" => Pi,
+                "a" => Ans,
+                "s" => {
+                    if self.inverse {
+                        self.inverse = false;
+                        Asin
+                    } else {
+                        Sin
+                    }
+                }
+                "g" => Log,
+                "l" => Ln,
+                "c" => {
+                    if self.inverse {
+                        self.inverse = false;
+                        Acos
+                    } else {
+                        Cos
+                    }
+                }
+                "i" => {
+                    self.inverse = !self.inverse;
+                    continue;
+                }
+                _ => continue,
+            };
+            self.equation.try_push(item);
             self.previous_answer_state = PreviousAnswerState::Hide;
         }
-        if ctx.input(|i| i.key_pressed(Num2)) {
-            self.equation.try_push(Number("2".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num3)) {
-            self.equation.try_push(Number("3".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num4)) {
-            self.equation.try_push(Number("4".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num5)) {
-            self.equation.try_push(Number("5".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num6)) {
-            self.equation.try_push(Number("6".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num7)) {
-            self.equation.try_push(Number("7".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num8)) {
-            self.equation.try_push(Number("8".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num9)) {
-            self.equation.try_push(Number("9".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Num0)) {
-            self.equation.try_push(Number("0".into()));
-            self.previous_answer_state = PreviousAnswerState::Hide;
-        }
-        if ctx.input(|i| i.key_pressed(Backspace)) {
+
+        if ctx.input(|i| i.key_pressed(Key::Backspace)) {
             self.equation.backspace();
             self.previous_answer_state = PreviousAnswerState::Hide;
         }
-        if ctx.input(|i| i.key_pressed(Enter)) {
+        if ctx.input(|i| i.key_pressed(Key::Enter)) {
             self.solve();
         }
     }
@@ -252,6 +270,7 @@ impl Calculator {
                 if self.inverse {
                     if Button::new(superscript(ui, "sin", "-1"))
                         .fill(FUNCTION_COLOR)
+                        .stroke(Stroke::NONE)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
                         .ui(ui)
@@ -272,6 +291,7 @@ impl Calculator {
                     if Button::new(superscript(ui, "e", "x"))
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
+                        .stroke(Stroke::NONE)
                         .rounding(ROUNDING)
                         .ui(ui)
                         .clicked()
@@ -314,6 +334,7 @@ impl Calculator {
                 if self.inverse {
                     if Button::new(superscript(ui, "cos", "-1"))
                         .fill(FUNCTION_COLOR)
+                        .stroke(Stroke::NONE)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
                         .ui(ui)
@@ -332,6 +353,7 @@ impl Calculator {
                 if self.inverse {
                     if Button::new(superscript(ui, "x", "10"))
                         .fill(FUNCTION_COLOR)
+                        .stroke(Stroke::NONE)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
                         .ui(ui)
@@ -374,6 +396,7 @@ impl Calculator {
                 if self.inverse {
                     if Button::new(superscript(ui, "tan", "-1"))
                         .fill(FUNCTION_COLOR)
+                        .stroke(Stroke::NONE)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
                         .ui(ui)
@@ -393,6 +416,7 @@ impl Calculator {
                 if self.inverse {
                     if Button::new(superscript(ui, "x", "2"))
                         .fill(FUNCTION_COLOR)
+                        .stroke(Stroke::NONE)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
                         .ui(ui)
@@ -475,6 +499,7 @@ impl Calculator {
                     .fill(FUNCTION_COLOR)
                     .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                     .rounding(ROUNDING)
+                    .stroke(Stroke::NONE)
                     .ui(ui)
                     .clicked()
                     {
@@ -484,6 +509,7 @@ impl Calculator {
                     }
                 } else {
                     if Button::new(superscript(ui, "x", "y"))
+                        .stroke(Stroke::NONE)
                         .fill(FUNCTION_COLOR)
                         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                         .rounding(ROUNDING)
@@ -506,6 +532,7 @@ impl Calculator {
 
                 if Button::new(RichText::new("=").size(FONT_SIZE).color(Color32::WHITE))
                     .fill(Color32::from_rgb(66, 133, 244))
+                    .stroke(Stroke::NONE)
                     .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
                     .rounding(ROUNDING)
                     .ui(ui)
@@ -559,6 +586,7 @@ impl Calculator {
             .fill(FUNCTION_COLOR)
             .min_size(vec2(BUTTON_WIDTH * 2.0 + GRID_SPACING, BUTTON_HEIGHT))
             .rounding(ROUNDING)
+            .stroke(Stroke::NONE)
             .ui(ui);
         let painter = ui.painter_at(response.rect);
         painter.rect(
@@ -593,7 +621,7 @@ impl Calculator {
             if let Some(answer) = answer {
                 self.previous_answer_state = PreviousAnswerState::Show;
                 if let Some(last) = self.history.last() {
-                    if last.0 != equation {
+                    if last.0 != equation || last.0.contains_ans() {
                         self.history.push((equation, answer));
                     }
                 } else {
@@ -613,7 +641,7 @@ impl Calculator {
             .show(ctx, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
                     ui.set_clip_rect(Rect {
-                        min: pos2(0.0, 0.0),
+                        min: pos2(12.0, 0.0),
                         max: pos2(ui.max_rect().max.x, 98.0),
                     });
 
@@ -621,7 +649,7 @@ impl Calculator {
                     match &self.previous_answer_state {
                         PreviousAnswerState::Show => {
                             ui.label(
-                                RichText::new(self.history.last().unwrap().1.to_string())
+                                RichText::new(format_number(self.history.last().unwrap().1))
                                     .size(EQUATION_SIZE),
                             );
                         }
@@ -655,6 +683,10 @@ impl Calculator {
         Area::new("previous answer")
             .fixed_pos(pos2(0.0, 12.0))
             .show(ctx, |ui| {
+                ui.set_clip_rect(Rect {
+                    min: pos2(55.0, 0.0),
+                    max: ui.max_rect().max,
+                });
                 ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
                     ui.add_space(22.0);
                     match &self.previous_answer_state {
@@ -674,7 +706,7 @@ impl Calculator {
                         PreviousAnswerState::Hide => {
                             if let Some(last) = self.history.last() {
                                 ui.label(
-                                    RichText::new(format!("Ans = {}", last.1.to_string()))
+                                    RichText::new(format!("Ans = {}", format_number(last.1)))
                                         .size(size)
                                         .color(color),
                                 );
@@ -697,6 +729,96 @@ impl Calculator {
                 });
             });
     }
+
+    fn show_history(&mut self, ctx: &Context) {
+        Area::new("history button")
+            .fixed_pos(pos2(17.0, 12.0))
+            .order(Order::Foreground)
+            .show(ctx, |ui| {
+                if ImageButton::new(
+                    self.history_icon.texture_id(ctx),
+                    self.history_icon.size_vec2(),
+                )
+                .frame(false)
+                .ui(ui)
+                .clicked()
+                {
+                    self.show_history_menu = true;
+                }
+            });
+        if self.show_history_menu {
+            Area::new("history")
+                .fixed_pos(pos2(7.5, 3.5))
+                .show(ctx, |ui| {
+                    egui::containers::Frame::none()
+                        .fill(Color32::WHITE)
+                        .shadow(Shadow {
+                            extrusion: 3.5,
+                            color: Color32::from_rgba_premultiplied(0, 0, 0, 35),
+                        })
+                        .rounding(ROUNDING)
+                        .inner_margin(Margin {
+                            left: 10.0,
+                            right: 10.0,
+                            top: 10.0,
+                            bottom: 10.0,
+                        })
+                        .show(ui, |ui| {
+                            ui.set_max_width(450.0);
+                            ui.set_min_height(180.0);
+                            if self.history.len() == 0 {
+                                ui.allocate_space(vec2(450.0, 30.0));
+                                ui.separator();
+                            } else {
+                                ui.allocate_space(vec2(0.0, 30.0));
+                                ui.separator();
+
+                                //ui.allocate_space(vec2(0.0, 10.0));
+                                ScrollArea::vertical()
+                                    .stick_to_right(true)
+                                    .max_width(450.0)
+                                    .show(ui, |ui| {
+                                        for (equation, answer) in &self.history {
+                                            ui.horizontal(|ui| {
+                                                Button::new(equation.render(
+                                                    FONT_SIZE,
+                                                    Color32::from_rgb(66, 133, 244),
+                                                ))
+                                                .fill(Color32::TRANSPARENT)
+                                                .min_size(vec2(BUTTON_HEIGHT, BUTTON_HEIGHT))
+                                                .rounding(ROUNDING)
+                                                .stroke(Stroke::new(1.2, FUNCTION_COLOR))
+                                                .ui(ui);
+
+                                                ui.add_space(2.5);
+
+                                                ui.label(
+                                                    RichText::new("=")
+                                                        .color(PREVIOUS_COLOR)
+                                                        .size(28.0),
+                                                );
+
+                                                ui.add_space(2.5);
+
+                                                Button::new(
+                                                    RichText::new(format_number(*answer))
+                                                        .color(Color32::from_rgb(66, 133, 244)),
+                                                )
+                                                .fill(Color32::TRANSPARENT)
+                                                .min_size(vec2(BUTTON_HEIGHT, BUTTON_HEIGHT))
+                                                .rounding(ROUNDING)
+                                                .stroke(Stroke::new(1.2, FUNCTION_COLOR))
+                                                .ui(ui);
+                                            });
+                                            ui.add_space(1.7);
+                                        }
+                                    });
+                            }
+                        });
+                    //ui.with_layout(cent, add_contents)
+                });
+        }
+    }
 }
 
 fn calculator_button(text: &str, color: Color32) -> Button {
@@ -704,6 +826,7 @@ fn calculator_button(text: &str, color: Color32) -> Button {
         .fill(color)
         .min_size(vec2(BUTTON_WIDTH, BUTTON_HEIGHT))
         .rounding(ROUNDING)
+        .stroke(Stroke::NONE)
 }
 
 fn superscript(ui: &Ui, text: &str, superscript_text: &str) -> LayoutJob {
@@ -735,4 +858,23 @@ fn smoothstep(start: f32, end: f32, t: f32) -> f32 {
     let t = t.clamp(0.0, 1.0);
     let t = -2.0 * t * t * t + 3.0 * t * t;
     end * t + start * (1.0 - t)
+}
+
+fn format_number(num: f64) -> String {
+    let integer_digits = num.abs().trunc().to_string().len();
+
+    if integer_digits < 13 {
+        num.to_string()
+    } else {
+        let e = integer_digits - 1;
+        let num = num / 10.0f64.powf((integer_digits - 1) as f64);
+        format!("{num:.7}e+{e}")
+
+        // let num = num / 10.0f64.powf((integer_digits - 2) as f64);
+        // num.to_string()
+        //     .chars()
+        //     .take(if num < 0.0 { 10 } else { 9 })
+        //     .collect::<String>()
+        //     + &format!("e+{}", integer_digits - 1)
+    }
 }
