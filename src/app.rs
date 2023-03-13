@@ -35,6 +35,7 @@ pub const FONT_SIZE: f32 = 23.0;
 pub const GRID_SPACING: f32 = 7.5;
 pub const EQUATION_SIZE: f32 = 39.0;
 pub const PREVIOUS_SIZE: f32 = 22.0;
+pub const TITLE_BAR_HEIGHT: f32 = 60.0;
 
 pub const ANIMATION_DURATION: f32 = 0.14;
 
@@ -49,11 +50,40 @@ pub const ROUNDING: Rounding = {
 };
 
 impl App for Calculator {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        [0.0, 0.0, 0.0, 0.0]
+    }
+
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         self.handle_key_presses(ctx);
         TopBottomPanel::top("top panel")
+            .frame(
+                egui::containers::Frame::none()
+                    .fill(ctx.style().visuals.window_fill)
+                    .rounding(Rounding {
+                        nw: 6.5,
+                        ne: 6.5,
+                        sw: 0.0,
+                        se: 0.0,
+                    })
+                    .inner_margin(Margin {
+                        left: 10.0,
+                        right: 10.0,
+                        top: 0.0,
+                        bottom: 5.0,
+                    }),
+            )
             .show_separator_line(false)
             .show(ctx, |ui| {
+                let app_rect = ui.max_rect();
+
+                let title_bar_rect = {
+                    let mut rect = app_rect;
+                    rect.max.y = rect.min.y + 20.0;
+                    rect
+                };
+                Self::title_bar_ui(ctx, ui, frame, title_bar_rect);
+
                 egui::containers::Frame::none()
                     .stroke(Stroke::new(2.0, FUNCTION_COLOR))
                     .rounding(ROUNDING)
@@ -69,9 +99,26 @@ impl App for Calculator {
                         });
                     });
             });
-        CentralPanel::default().show(ctx, |ui| {
-            self.buttons(ui);
-        });
+        CentralPanel::default()
+            .frame(
+                egui::containers::Frame::none()
+                    .fill(ctx.style().visuals.window_fill)
+                    .rounding(Rounding {
+                        nw: 0.0,
+                        ne: 0.0,
+                        sw: 6.5,
+                        se: 6.5,
+                    })
+                    .inner_margin(Margin {
+                        left: 7.8,
+                        right: 0.0,
+                        top: 5.0,
+                        bottom: 0.0,
+                    }),
+            )
+            .show(ctx, |ui| {
+                self.buttons(ui);
+            });
         self.show_history(ctx);
         self.show_previous(ctx);
         self.show_current(ctx);
@@ -88,6 +135,44 @@ impl App for Calculator {
 }
 
 impl Calculator {
+    fn title_bar_ui(
+        ctx: &Context,
+        ui: &mut egui::Ui,
+        frame: &mut eframe::Frame,
+        title_bar_rect: eframe::epaint::Rect,
+    ) {
+        let title_bar_response = ui.interact(title_bar_rect, Id::new("title_bar"), Sense::click());
+
+        if title_bar_response.is_pointer_button_down_on() {
+            frame.drag_window();
+        }
+        ui.label("");
+
+        Area::new("close")
+            .fixed_pos(pos2(726.0, 0.0))
+            .show(ctx, |ui| {
+                if Button::new(RichText::new("❌").font(FontId::proportional(25.0)))
+                    .frame(false)
+                    .ui(ui)
+                    .clicked()
+                {
+                    frame.close();
+                }
+            });
+
+        Area::new("minimize")
+            .fixed_pos(pos2(701.0, -2.0))
+            .show(ctx, |ui| {
+                if Button::new(RichText::new("–").font(FontId::proportional(30.0)))
+                    .frame(false)
+                    .ui(ui)
+                    .clicked()
+                {
+                    frame.set_minimized(true);
+                }
+            });
+    }
+
     pub fn new(cc: &CreationContext) -> Self {
         let ctx = &cc.egui_ctx;
         ctx.set_visuals(Visuals::light());
@@ -721,14 +806,14 @@ impl Calculator {
     }
     fn show_current(&self, ctx: &Context) {
         let t = self.animation_time.unwrap_or(ANIMATION_DURATION) / ANIMATION_DURATION;
-        let y_position = smoothstep(95.0, 43.0, t);
+        let y_position = smoothstep(95.0, 43.0, t) + TITLE_BAR_HEIGHT / 2.0;
         Area::new("current answer")
             .fixed_pos(pos2(0.0, y_position))
             .show(ctx, |ui| {
                 ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
                     ui.set_clip_rect(Rect {
-                        min: pos2(12.0, 0.0),
-                        max: pos2(ui.max_rect().max.x, 98.0),
+                        min: pos2(12.0, TITLE_BAR_HEIGHT / 2.0),
+                        max: pos2(ui.max_rect().max.x, 94.5 + TITLE_BAR_HEIGHT / 2.0),
                     });
 
                     ui.add_space(22.0);
@@ -767,10 +852,10 @@ impl Calculator {
         };
 
         Area::new("previous answer")
-            .fixed_pos(pos2(0.0, 12.0))
+            .fixed_pos(pos2(0.0, 12.0 + TITLE_BAR_HEIGHT / 2.0))
             .show(ctx, |ui| {
                 ui.set_clip_rect(Rect {
-                    min: pos2(55.0, 0.0),
+                    min: pos2(55.0, 0.0 + TITLE_BAR_HEIGHT / 2.0),
                     max: ui.max_rect().max,
                 });
                 ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
@@ -820,7 +905,7 @@ impl Calculator {
         let mut just_opened = false;
 
         Area::new("history button")
-            .fixed_pos(pos2(17.0, 12.0))
+            .fixed_pos(pos2(17.0, 12.0 + TITLE_BAR_HEIGHT / 2.0))
             .order(Order::Foreground)
             .interactable(!self.show_history_menu)
             .show(ctx, |ui| {
@@ -837,7 +922,7 @@ impl Calculator {
             });
         if self.show_history_menu {
             Area::new("history")
-                .fixed_pos(pos2(7.5, 3.5))
+                .fixed_pos(pos2(7.5, 3.5 + TITLE_BAR_HEIGHT / 2.0))
                 .show(ctx, |ui| {
                     egui::containers::Frame::none()
                         .fill(Color32::WHITE)
@@ -846,12 +931,7 @@ impl Calculator {
                             color: Color32::from_rgba_premultiplied(0, 0, 0, 40),
                         })
                         .rounding(ROUNDING)
-                        .inner_margin(Margin {
-                            left: 10.0,
-                            right: 10.0,
-                            top: 10.0,
-                            bottom: 10.0,
-                        })
+                        .inner_margin(Margin::from(10.0))
                         .show(ui, |ui| {
                             ui.set_max_width(450.0);
                             ui.set_min_height(180.0);
