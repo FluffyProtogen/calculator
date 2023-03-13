@@ -160,10 +160,22 @@ impl Calculator {
                 "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "0" | "." => {
                     Number(key.into())
                 }
-                "+" => Add,
-                "-" => Subtract,
-                "*" => Multiply,
-                "/" => Divide,
+                "+" => {
+                    self.try_continue_answer();
+                    Add
+                }
+                "-" => {
+                    self.try_continue_answer();
+                    Subtract
+                }
+                "*" => {
+                    self.try_continue_answer();
+                    Multiply
+                }
+                "/" => {
+                    self.try_continue_answer();
+                    Divide
+                }
                 "!" => Factorial,
                 "%" => Percent,
                 "^" => Power,
@@ -353,6 +365,7 @@ impl Calculator {
                     .ui(ui)
                     .clicked_or_drag_ended()
                 {
+                    self.try_continue_answer();
                     self.equation.try_push(Divide);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
@@ -429,6 +442,7 @@ impl Calculator {
                     .ui(ui)
                     .clicked_or_drag_ended()
                 {
+                    self.try_continue_answer();
                     self.equation.try_push(Multiply);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
@@ -505,6 +519,7 @@ impl Calculator {
                     .ui(ui)
                     .clicked_or_drag_ended()
                 {
+                    self.try_continue_answer();
                     self.equation.try_push(Subtract);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
@@ -615,6 +630,7 @@ impl Calculator {
                     .ui(ui)
                     .clicked_or_drag_ended()
                 {
+                    self.try_continue_answer();
                     self.equation.try_push(Add);
                     self.previous_answer_state = PreviousAnswerState::Hide;
                 }
@@ -923,6 +939,16 @@ impl Calculator {
                             }
                         });
                 });
+        }
+    }
+
+    fn try_continue_answer(&mut self) {
+        if self.equation.is_empty() {
+            if self.previous_answer_state == PreviousAnswerState::Show {
+                if let Some((_, num)) = self.history.last() {
+                    self.equation.try_push(Rnd(format_number(*num)));
+                }
+            }
         }
     }
 }

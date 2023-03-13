@@ -1,7 +1,7 @@
 use eframe::*;
 use egui::*;
 
-use crate::app::{Fluff, BUTTON_HEIGHT, BUTTON_WIDTH, ROUNDING};
+use crate::app::{BUTTON_HEIGHT, BUTTON_WIDTH, ROUNDING};
 pub struct CalculatorButton {
     text: WidgetText,
     fill: Color32,

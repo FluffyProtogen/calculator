@@ -114,6 +114,10 @@ impl Equation {
         self.list.contains(&Ans)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.list.is_empty()
+    }
+
     pub fn clean(&self, ans: f64) -> Vec<Item> {
         let mut cleaned = vec![];
 
